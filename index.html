@@ -16,7 +16,6 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Oswald:wght@500;600;700&family=JetBrains+Mono:wght@700;800&display=swap" rel="stylesheet">
-<!-- Versions figées : les mêmes URLs sont pré-chargées par sw.js pour le mode hors-ligne -->
 <script defer src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -93,18 +92,20 @@ header {
 nav {
   display: flex; gap: 4px; background: #1e293b;
   border-bottom: 1px solid var(--border); padding: 6px 8px;
+  overflow-x: auto;
 }
 nav button {
   flex: 1; border: 0; background: transparent; color: var(--muted);
   font-family: 'Oswald', sans-serif; font-weight: 600; text-transform: uppercase;
-  letter-spacing: 0.5px; padding: 8px 4px; border-radius: var(--radius-sm); font-size: 0.88rem;
+  letter-spacing: 0.5px; padding: 8px 6px; border-radius: var(--radius-sm); font-size: 0.85rem;
+  white-space: nowrap;
 }
 nav button.active { background: var(--surface-alt); color: #fff; border-bottom: 2px solid var(--orange); }
 @media (hover: hover) {
   nav button:hover { color: #fff; background: rgba(255, 255, 255, 0.08); }
 }
 
-main { max-width: 980px; margin: auto; padding: 12px; }
+main { max-width: 1200px; margin: auto; padding: 12px; }
 .tab { display: none; }
 .tab.active { display: block; animation: fadeIn 0.2s ease-out; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
@@ -149,6 +150,15 @@ input:focus, select:focus {
   .btn.red:hover:not(:disabled) { background: #b91c1c; }
   .btn.ghost:hover:not(:disabled) { background: rgba(255, 255, 255, 0.08); border-color: var(--orange); }
 }
+
+.cat-checkboxes {
+  display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px;
+}
+.cat-chip {
+  display: flex; align-items: center; gap: 5px; background: #0f172a; border: 1.5px solid var(--border);
+  padding: 5px 9px; border-radius: 6px; font-weight: 700; font-size: 0.8rem; cursor: pointer; user-select: none;
+}
+.cat-chip input[type="checkbox"] { cursor: pointer; accent-color: var(--orange); width: 15px; height: 15px; }
 
 .chrono {
   background: #090d16; border: 3px solid #334155; border-radius: var(--radius-md);
@@ -211,6 +221,35 @@ input:focus, select:focus {
 .last.show { display: block; animation: pop 0.2s ease-out; }
 .last.duplicate { border-color: var(--red); background: rgba(239, 68, 68, 0.15); color: #f87171; }
 @keyframes pop { from { transform: scale(0.98); } to { transform: scale(1); } }
+
+/* Grille de sélection d'arrivée rapide */
+.arrival-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 8px; margin-top: 10px; max-height: 280px; overflow-y: auto;
+  padding: 6px; background: #090d16; border-radius: var(--radius-sm); border: 1px solid var(--border);
+}
+.arrival-chip-btn {
+  background: #1e293b; border: 1.5px solid var(--border); border-radius: 6px;
+  padding: 8px 6px; text-align: center; color: #fff; cursor: pointer; transition: all 0.1s ease;
+}
+.arrival-chip-btn:hover { border-color: var(--orange); background: #334155; }
+.arrival-chip-btn.arrived {
+  opacity: 0.25; background: #090d16; border-color: transparent; pointer-events: none;
+}
+.arrival-chip-btn.hide-arrived { display: none !important; }
+.arrival-chip-bib { font-family: 'Oswald', sans-serif; font-size: 1.2rem; font-weight: 700; color: var(--yellow); }
+.arrival-chip-names { font-size: 0.72rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Postes de passage */
+.checkpoints-table-wrap {
+  overflow-x: auto; border: 1.5px solid var(--border); border-radius: var(--radius-sm); background: #1e293b;
+}
+.cp-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+.cp-table th, .cp-table td { border: 1px solid var(--border); padding: 6px 8px; text-align: center; }
+.cp-table th { background: #090d16; color: var(--orange); font-family: 'Oswald', sans-serif; text-transform: uppercase; }
+.cp-header-poste { background: #1a2234 !important; color: #38bdf8 !important; border-bottom: 2px solid var(--blue); }
+.cp-subth { font-size: 0.72rem; color: var(--muted); }
+.cp-checkbox { width: 18px; height: 18px; accent-color: var(--green); cursor: pointer; }
 
 .manual-wrapper {
   background: #1e293b; border: 1.5px solid var(--border);
@@ -381,6 +420,7 @@ th {
 
   <nav id="mainNav">
     <button class="active" data-tab="starterTab">⏱️ Départs & Arrivées</button>
+    <button data-tab="checkpointsTab">📍 Points de passage</button>
     <button data-tab="resultsTab">🏆 Classement</button>
     <button data-tab="historyTab">📜 Historique</button>
     <button data-tab="configTab">👥 Équipes & Dossards</button>
@@ -393,28 +433,28 @@ th {
 <section id="starterTab" class="tab active">
   <div class="card">
     <div class="row">
-      <input id="raceTitle" class="grow" placeholder="Nom de la manche (ex: Minimes Garçons MG)" style="font-family:'Oswald',sans-serif;font-size:1.15rem;font-weight:700">
+      <input id="raceTitle" class="grow" placeholder="Nom de la manche (ex: Minimes Filles & Garçons)" style="font-family:'Oswald',sans-serif;font-size:1.15rem;font-weight:700">
       <button class="btn orange" id="saveTitleBtn">💾 Valider Nom</button>
       <button class="btn ghost" id="openNewRaceModalBtn">＋ Nouvelle Manche</button>
     </div>
 
-    <div class="row" style="margin-top:10px;background:#1e293b;padding:8px 12px;border-radius:6px;border:1.5px solid var(--border);gap:12px">
-      <div style="display:flex;align-items:center;gap:6px">
-        <label for="raceCategorySelect" style="font-weight:700;font-size:0.85rem">🏷️ Catégorie :</label>
-        <select id="raceCategorySelect" style="font-weight:700">
-          <option value="BG">BG (Benjamin Garçon)</option>
-          <option value="BF">BF (Benjamin Fille)</option>
-          <option value="BMX">BMX (Benjamin Mixte)</option>
-          <option value="MG">MG (Minime Garçon)</option>
-          <option value="MF">MF (Minime Fille)</option>
-          <option value="MMX">MMX (Minime Mixte)</option>
-          <option value="OPEN">OPEN / ÉTABLISSEMENT</option>
-        </select>
+    <div style="margin-top:10px;background:#1e293b;padding:8px 12px;border-radius:6px;border:1.5px solid var(--border)">
+      <div class="row" style="justify-content:space-between">
+        <span style="font-weight:700;font-size:0.85rem">🏷️ Catégories au départ (sélection multiple) :</span>
+        <div style="display:flex;align-items:center;gap:6px">
+          <label for="raceDistanceInput" style="font-weight:700;font-size:0.85rem">📏 Distance :</label>
+          <input id="raceDistanceInput" type="number" step="0.1" min="0.1" value="3.5" style="width:75px;font-weight:800;text-align:center">
+          <span style="font-weight:700;font-size:0.85rem">km</span>
+        </div>
       </div>
-      <div style="display:flex;align-items:center;gap:6px">
-        <label for="raceDistanceInput" style="font-weight:700;font-size:0.85rem">📏 Distance :</label>
-        <input id="raceDistanceInput" type="number" step="0.1" min="0.1" value="3.5" style="width:75px;font-weight:800;text-align:center">
-        <span style="font-weight:700;font-size:0.85rem">km</span>
+      <div class="cat-checkboxes" id="catCheckboxesContainer">
+        <label class="cat-chip"><input type="checkbox" value="BG"> BG</label>
+        <label class="cat-chip"><input type="checkbox" value="BF"> BF</label>
+        <label class="cat-chip"><input type="checkbox" value="BMX"> BMX</label>
+        <label class="cat-chip"><input type="checkbox" value="MG"> MG</label>
+        <label class="cat-chip"><input type="checkbox" value="MF"> MF</label>
+        <label class="cat-chip"><input type="checkbox" value="MMX"> MMX</label>
+        <label class="cat-chip"><input type="checkbox" value="OPEN"> OPEN</label>
       </div>
     </div>
 
@@ -451,17 +491,27 @@ th {
 
   <div id="arrivalSection" class="card hidden" style="border-color:var(--green)">
     <div class="row" style="justify-content:space-between">
-      <h2>📷 Poste d'arrivée — Scan des binômes</h2>
+      <h2>📷 Poste d'arrivée — Scan & Clics Rapides</h2>
       <div id="arrivalProgressBadge" class="cat-badge" style="font-size:0.9rem">0 / 0 arrivés</div>
+    </div>
+
+    <!-- Sélecteur rapide des équipes en course sous forme de cases à cocher/cliquer -->
+    <div style="margin: 8px 0; background: #131d2e; padding: 10px; border-radius: var(--radius-sm); border: 1px solid var(--border);">
+      <div class="row" style="justify-content:space-between; margin-bottom: 6px;">
+        <span style="font-size:0.85rem;font-weight:700;color:var(--yellow)">⚡ Validation Rapide en 1 clic :</span>
+        <label style="font-size:0.75rem;cursor:pointer;display:flex;align-items:center;gap:4px">
+          <input type="checkbox" id="hideArrivedToggle" checked> Masquer les équipes arrivées
+        </label>
+      </div>
+      <div id="arrivalButtonsGrid" class="arrival-grid"></div>
     </div>
 
     <div class="row">
       <select id="cameraSelect" class="grow" aria-label="Caméra"></select>
       <button id="cameraBtn" class="btn orange">📷 Activer Caméra</button>
-      <button id="backToStartsBtn" class="btn ghost">◀ Retour Sas Départ</button>
+      <button id="backToStartsBtn" class="btn ghost">◀ Sas Départ</button>
     </div>
     <div id="reader"></div>
-    <div class="muted" style="margin:6px 0">Visez le QR code ou saisissez le numéro au clavier :</div>
 
     <div id="lastScan" class="last"></div>
 
@@ -491,12 +541,50 @@ th {
   </div>
 </section>
 
+<!-- NOUVEL ONGLET POINTS DE PASSAGE (5 POSTES ALLER/RETOUR) -->
+<section id="checkpointsTab" class="tab">
+  <div class="card">
+    <div class="row" style="justify-content:space-between">
+      <div>
+        <h2>📍 Surveillance — Points de Passage</h2>
+        <div class="muted">Cochez le passage (Aller / Retour) des binômes aux 5 postes du parcours.</div>
+      </div>
+      <button id="resetCheckpointsBtn" class="btn red" style="font-size:0.75rem;padding:4px 8px">Réinitialiser les pointages</button>
+    </div>
+
+    <div class="checkpoints-table-wrap" style="margin-top:12px">
+      <table class="cp-table">
+        <thead>
+          <tr>
+            <th rowspan="2" style="width:60px">Dossard</th>
+            <th rowspan="2">Binôme</th>
+            <th rowspan="2">Cat.</th>
+            <th colspan="2" class="cp-header-poste">Poste 1</th>
+            <th colspan="2" class="cp-header-poste">Poste 2</th>
+            <th colspan="2" class="cp-header-poste">Poste 3</th>
+            <th colspan="2" class="cp-header-poste">Poste 4</th>
+            <th colspan="2" class="cp-header-poste">Poste 5</th>
+          </tr>
+          <tr>
+            <th class="cp-subth">Aller</th><th class="cp-subth">Ret</th>
+            <th class="cp-subth">Aller</th><th class="cp-subth">Ret</th>
+            <th class="cp-subth">Aller</th><th class="cp-subth">Ret</th>
+            <th class="cp-subth">Aller</th><th class="cp-subth">Ret</th>
+            <th class="cp-subth">Aller</th><th class="cp-subth">Ret</th>
+          </tr>
+        </thead>
+        <tbody id="checkpointsBody"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
 <div id="newRaceModal" class="modal-overlay hidden">
   <div class="modal-box">
     <h2 style="margin-top:0">🏁 Nouvelle Manche Bike & Run</h2>
-    <p class="muted">Définissez l'intitulé de la course avant d'accueillir les élèves sur la ligne. La catégorie et la distance sont celles réglées ci-dessus.</p>
+    <p class="muted">Définissez l'intitulé de la course avant d'accueillir les élèves sur la ligne.</p>
     <div style="margin:14px 0">
-      <input id="modalRaceTitleInput" class="grow" style="width:100%;font-size:1.15rem;font-weight:700" placeholder="Ex: Manche 1 — Benjamins Mixte BMX">
+      <input id="modalRaceTitleInput" class="grow" style="width:100%;font-size:1.15rem;font-weight:700" placeholder="Ex: Manche 1 — Minimes">
     </div>
     <div class="row" style="justify-content:flex-end;gap:8px">
       <button id="cancelModalBtn" class="btn ghost">Annuler</button>
@@ -574,7 +662,7 @@ th {
   <div class="card" style="border-left: 5px solid var(--orange)">
     <h2>📊 1. Synchronisation Google Sheets Binômes</h2>
     <div class="muted" style="margin-bottom:10px">
-      Lien Google Sheet (colonnes : <b>Dossard, Nom1, Prenom1, Nom2, Prenom2, Sexe, Categorie, College</b>). Le partage doit être réglé sur « Toute personne disposant du lien ».
+      Lien Google Sheet (colonnes : <b>Dossard, Nom1, Prenom1, Nom2, Prenom2, Sexe, Categorie, College</b>).
     </div>
     <div class="row" style="gap:8px">
       <input id="sheetUrlInput" class="grow" placeholder="https://docs.google.com/spreadsheets/d/.../edit?usp=sharing">
@@ -671,7 +759,7 @@ const firebaseConfig = {
   appId: "1:496982171898:web:2df522534143085007e943"
 };
 
-const TEAM_INTERVAL_MS = 15000; // intervalle entre deux départs
+const TEAM_INTERVAL_MS = 15000;
 
 const urlParams = new URLSearchParams(location.search);
 let currentEtab = (urlParams.get("etab") || "district-cognac").toLowerCase().replace(/[^a-z0-9_-]/g, "");
@@ -681,14 +769,14 @@ if (!currentEtab) currentEtab = "district-cognac";
    ÉTAT
    ============================================================ */
 let db = null, courseId = null, listeningCourseId = null;
-let courseData = {}, results = [], teams = [];
+let courseData = {}, results = [], teams = [], checkpoints = {};
 let scanner = null, scanning = false;
 let timer = null, localStart = 0, wakeLock = null;
 let lastScanTime = 0, lastScanBib = "";
 let currentSlot = -1, lastSlot = -1, lastBeepTick = -1;
-let serverOffset = 0;          // décalage horloge locale -> horloge serveur (ms)
+let serverOffset = 0;
 let pendingCount = 0;
-let unsubActive = null, unsubResults = null, unsubTeams = null, unsubMeta = null;
+let unsubActive = null, unsubResults = null, unsubTeams = null, unsubMeta = null, unsubCheckpoints = null;
 let historyCache = {};
 
 /* ============================================================
@@ -722,8 +810,6 @@ function refreshStatus() {
   else setStatus("● Connecté : " + currentEtab.toUpperCase() + pend, "ok");
 }
 
-// Les écritures Firestore ne doivent jamais bloquer l'interface (hors-ligne, elles
-// restent en file d'attente et ne se résolvent qu'au retour du réseau).
 function safe(promise) {
   return Promise.resolve(promise).catch(e => {
     console.error(e);
@@ -741,21 +827,29 @@ function getEtabDoc() { return db.collection("bikerun_etablissements").doc(curre
 function getActiveCourseRef() { return getEtabDoc().collection("config").doc("active"); }
 function getCourseRef(id) { return getEtabDoc().collection("courses").doc(id || courseId); }
 
-// Binômes qui participent à la manche en cours (catégorie de la manche), triés par dossard.
+// Récupération des catégories sélectionnées (array)
+function getSelectedCategories() {
+  const cats = courseData.categories;
+  if (Array.isArray(cats) && cats.length) return cats.map(c => String(c).toUpperCase());
+  if (courseData.category) return [String(courseData.category).toUpperCase()];
+  return ["MG", "MF", "MMX"];
+}
+
+// Filtrage des binômes selon les catégories cochées
 function raceTeams() {
-  const cat = String(courseData.category || "OPEN").toUpperCase();
-  if (cat === "OPEN") return teams;
-  const f = teams.filter(t => String(t.categorie || "").toUpperCase() === cat);
+  const selCats = getSelectedCategories();
+  if (selCats.includes("OPEN")) return teams;
+  const f = teams.filter(t => selCats.includes(String(t.categorie || "").toUpperCase()));
   return f.length ? f : teams;
 }
 function raceTeamsFiltered() {
-  const cat = String(courseData.category || "OPEN").toUpperCase();
-  if (cat === "OPEN") return true;
-  return teams.some(t => String(t.categorie || "").toUpperCase() === cat);
+  const selCats = getSelectedCategories();
+  if (selCats.includes("OPEN")) return true;
+  return teams.some(t => selCats.includes(String(t.categorie || "").toUpperCase()));
 }
 
 /* ============================================================
-   SON (déverrouillé au premier toucher)
+   SON
    ============================================================ */
 let audioCtx = null;
 function ensureAudio() {
@@ -791,7 +885,7 @@ function playSound(type) {
 }
 
 /* ============================================================
-   ÉCRAN TOUJOURS ALLUMÉ
+   WAKE LOCK & HORLOGE
    ============================================================ */
 async function requestWakeLock() {
   if (!("wakeLock" in navigator) || wakeLock) return;
@@ -804,10 +898,6 @@ document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "visible") requestWakeLock();
 });
 
-/* ============================================================
-   SYNCHRONISATION D'HORLOGE AVEC LE SERVEUR
-   (départs et arrivées sont saisis sur des appareils différents)
-   ============================================================ */
 async function syncServerTime() {
   if (!db || !navigator.onLine) return;
   try {
@@ -834,10 +924,11 @@ function switchTab(id) {
   document.querySelectorAll(".tab").forEach(t => t.classList.toggle("active", t.id === id));
   if (id === "historyTab") loadHistory();
   if (id === "diagTab") runDiag();
+  if (id === "checkpointsTab") renderCheckpointsTable();
 }
 
 /* ============================================================
-   CAMÉRA / SCAN
+   SCANNER CAMÉRA
    ============================================================ */
 async function loadCameras() {
   const sel = $("cameraSelect");
@@ -863,7 +954,7 @@ async function stopScanner() {
 async function toggleCamera() {
   if (scanning) { await stopScanner(); return; }
   try {
-    if (typeof Html5Qrcode === "undefined") throw new Error("Module de scan non chargé (hors connexion ?)");
+    if (typeof Html5Qrcode === "undefined") throw new Error("Module de scan non chargé");
     if (!$("cameraSelect").options.length) await loadCameras();
     if (!scanner) {
       const cfg = { verbose: false };
@@ -901,7 +992,6 @@ function parseCSV(text) {
   }
   if (cur !== "" || row.length) { row.push(cur); rows.push(row); }
   rows = rows.filter(r => r.some(c => c.trim() !== ""));
-  // Ancien format : tout dans une seule colonne, séparé par des « ; »
   if (rows.length && rows.every(r => r.length === 1)) rows = rows.map(r => r[0].split(";"));
   return rows;
 }
@@ -934,9 +1024,6 @@ function downloadCsv(rows, title) {
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
 
-/* ============================================================
-   ÉCRITURES PAR LOTS (limite Firestore : 500 opérations)
-   ============================================================ */
 async function batchWrite(ops) {
   for (let i = 0; i < ops.length; i += 400) {
     const b = db.batch();
@@ -946,7 +1033,7 @@ async function batchWrite(ops) {
 }
 
 /* ============================================================
-   INITIALISATION DES ÉVÉNEMENTS
+   INITIALISATION & EVENTS
    ============================================================ */
 document.addEventListener("DOMContentLoaded", () => {
   document.querySelectorAll("nav button").forEach(b => b.addEventListener("click", () => switchTab(b.dataset.tab)));
@@ -964,7 +1051,24 @@ document.addEventListener("DOMContentLoaded", () => {
   });
   $("togglePadBtn").addEventListener("click", () => $("padContainer").classList.toggle("hidden"));
 
-  // Top départ
+  // Checkboxes Catégories
+  document.querySelectorAll("#catCheckboxesContainer input[type='checkbox']").forEach(cb => {
+    cb.addEventListener("change", () => {
+      const selected = Array.from(document.querySelectorAll("#catCheckboxesContainer input[type='checkbox']:checked")).map(c => c.value);
+      if (!selected.length) {
+        cb.checked = true; // au moins une sélection
+        return;
+      }
+      if (db && courseId) {
+        safe(getCourseRef(courseId).set({ categories: selected }, { merge: true }));
+      }
+    });
+  });
+
+  // Toggle masquer les arrivés dans la grille
+  $("hideArrivedToggle").addEventListener("change", renderArrivalButtons);
+
+  // Départ T0
   $("startFirstTeamBtn").addEventListener("click", () => {
     if (!db || !courseId) { alert("Base de données non connectée."); return; }
     if ((Number(courseData.startAtMs) || 0) > 0 &&
@@ -998,7 +1102,6 @@ document.addEventListener("DOMContentLoaded", () => {
     alert("Manche clôturée avec succès.");
   });
 
-  // Titre / catégorie / distance de la manche en cours
   $("saveTitleBtn").addEventListener("click", () => {
     const t = $("raceTitle").value.trim() || "Manche";
     if (db && courseId) {
@@ -1012,14 +1115,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const d = parseFloat($("raceDistanceInput").value);
     if (d > 0 && db && courseId) safe(getCourseRef(courseId).set({ raceDistanceKm: d }, { merge: true }));
   });
-  $("raceCategorySelect").addEventListener("change", () => {
-    if (db && courseId) safe(getCourseRef(courseId).set({ category: $("raceCategorySelect").value }, { merge: true }));
-  });
 
   // Nouvelle manche
   $("openNewRaceModalBtn").addEventListener("click", () => {
     if ((Number(courseData.startAtMs) || 0) > 0 && !courseData.finished &&
-        !confirm("Une manche est en cours et n'est pas clôturée. Créer quand même une nouvelle manche ?")) return;
+        !confirm("Une manche est en cours. Créer une nouvelle manche ?")) return;
     $("modalRaceTitleInput").value = "Manche " + new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
     $("newRaceModal").classList.remove("hidden");
   });
@@ -1029,10 +1129,10 @@ document.addEventListener("DOMContentLoaded", () => {
     const title = $("modalRaceTitleInput").value.trim() || "Manche";
     const id = "manche_" + Date.now();
     const d = parseFloat($("raceDistanceInput").value) || 3.5;
-    const cat = $("raceCategorySelect").value;
+    const cats = Array.from(document.querySelectorAll("#catCheckboxesContainer input[type='checkbox']:checked")).map(c => c.value);
     safe(getCourseRef(id).set({
       title, startAtMs: 0, startsFinished: false, finished: false,
-      raceDistanceKm: d, category: cat,
+      raceDistanceKm: d, categories: cats.length ? cats : ["MG", "MF", "MMX"],
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     }));
     safe(getActiveCourseRef().set({ courseId: id, title, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }));
@@ -1041,6 +1141,17 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   $("cameraBtn").addEventListener("click", toggleCamera);
+
+  // Réinitialisation des checkpoints de la manche
+  $("resetCheckpointsBtn").addEventListener("click", async () => {
+    if (!confirm("Voulez-vous réinitialiser tous les pointages des postes de cette manche ?")) return;
+    if (db && courseId) {
+      try {
+        const snap = await getCourseRef(courseId).collection("checkpoints").get();
+        await batchWrite(snap.docs.map(d => ({ ref: d.ref, del: true })));
+      } catch (e) { alert("Erreur : " + e.message); }
+    }
+  });
 
   // Écran classement
   const screenUrl = () => location.origin + location.pathname + "?etab=" + currentEtab + "&mode=screen";
@@ -1086,10 +1197,10 @@ document.addEventListener("DOMContentLoaded", () => {
     doc.save("classement_bikerun_" + (courseData.title || "manche").replace(/[^a-z0-9_-]/gi, "_") + ".pdf");
   });
 
-  // Impression des dossards (le QR ne contient que le numéro : plus petit, donc plus fiable à scanner)
+  // Impression des dossards
   $("printBibsBtn").addEventListener("click", () => {
     if (!teams.length) { alert("Veuillez d'abord synchroniser vos équipes."); return; }
-    if (typeof QRCode === "undefined") { alert("Module QR code non chargé (hors connexion ?)."); return; }
+    if (typeof QRCode === "undefined") { alert("Module QR code non chargé."); return; }
     const printSec = $("printSection");
     printSec.innerHTML = "";
     for (let i = 0; i < teams.length; i += 20) {
@@ -1113,12 +1224,11 @@ document.addEventListener("DOMContentLoaded", () => {
   });
   window.addEventListener("afterprint", () => { $("printSection").innerHTML = ""; });
 
-  // Import Google Sheets
   $("syncSheetBtn").addEventListener("click", syncSheet);
 
   $("clearTeamsBtn").addEventListener("click", async () => {
     if (!db || !teams.length) return;
-    if (!confirm("Supprimer les " + teams.length + " binômes de la base ? (Les résultats déjà enregistrés sont conservés.)")) return;
+    if (!confirm("Supprimer les " + teams.length + " binômes de la base ?")) return;
     try {
       await batchWrite(teams.map(t => ({ ref: getEtabDoc().collection("teams").doc(t.id), del: true })));
     } catch (e) { alert("Erreur : " + e.message); }
@@ -1133,7 +1243,6 @@ document.addEventListener("DOMContentLoaded", () => {
     if (v && v !== currentEtab) location.search = "?etab=" + encodeURIComponent(v);
   });
 
-  // Historique
   $("refreshHistoryBtn").addEventListener("click", loadHistory);
   $("historyList").addEventListener("click", async e => {
     const b = e.target.closest("button[data-act]");
@@ -1154,7 +1263,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
   $("diagBtn").addEventListener("click", runDiag);
 
-  // Mode écran (tablette classement)
   if (urlParams.get("mode") === "screen") {
     $("topbar").classList.add("hidden");
     $("normalApp").classList.add("hidden");
@@ -1170,7 +1278,7 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 /* ============================================================
-   IMPORT GOOGLE SHEETS
+   GOOGLE SHEETS
    ============================================================ */
 async function syncSheet() {
   const url = $("sheetUrlInput").value.trim();
@@ -1186,11 +1294,11 @@ async function syncSheet() {
     if (!db) throw new Error("Base de données non connectée.");
     info.textContent = "Téléchargement en cours…";
     const res = await fetch(exportUrl, { cache: "no-store" });
-    if (!res.ok) throw new Error("Lecture impossible (HTTP " + res.status + "). Le partage est-il réglé sur « Toute personne disposant du lien » ?");
+    if (!res.ok) throw new Error("Lecture impossible. Partage sur « Toute personne disposant du lien » ?");
     const table = parseCSV(await res.text());
     if (!table.length) throw new Error("Feuille vide.");
 
-    const start = /^\s*\d/.test(table[0][0] || "") ? 0 : 1; // saute la ligne d'en-tête
+    const start = /^\s*\d/.test(table[0][0] || "") ? 0 : 1;
     const byBib = new Map();
     let ignored = 0;
     for (let i = start; i < table.length; i++) {
@@ -1206,11 +1314,11 @@ async function syncSheet() {
         college: p[7] || "District Cognac"
       });
     }
-    if (!byBib.size) throw new Error("Aucune ligne valide trouvée (vérifiez l'ordre des colonnes).");
+    if (!byBib.size) throw new Error("Aucune ligne valide trouvée.");
 
     const col = getEtabDoc().collection("teams");
     await batchWrite([...byBib.values()].map(r => ({ ref: col.doc("dossard_" + r.dossard), data: r })));
-    info.textContent = "✅ " + byBib.size + " binômes synchronisés" + (ignored ? " (" + ignored + " ligne(s) ignorée(s))" : "") + " !";
+    info.textContent = "✅ " + byBib.size + " binômes synchronisés" + (ignored ? " (" + ignored + " ignorée(s))" : "") + " !";
     info.style.color = "var(--green)";
   } catch (e) {
     info.textContent = "❌ " + e.message;
@@ -1219,7 +1327,7 @@ async function syncSheet() {
 }
 
 /* ============================================================
-   FIREBASE
+   FIREBASE & LISTENERS
    ============================================================ */
 async function init() {
   $("etabInput").value = currentEtab;
@@ -1227,12 +1335,11 @@ async function init() {
   if (saved) $("sheetUrlInput").value = saved;
 
   try {
-    if (typeof firebase === "undefined") throw new Error("Librairie Firebase non chargée (pas de réseau ?)");
+    if (typeof firebase === "undefined") throw new Error("Librairie Firebase non chargée");
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     db = firebase.firestore();
-    // Cache local : l'appli reste utilisable si le réseau coupe, les écritures sont renvoyées ensuite
     try { await db.enablePersistence({ synchronizeTabs: true }); }
-    catch (e) { console.warn("Persistance hors-ligne indisponible :", e.code || e.message); }
+    catch (e) { console.warn("Persistance hors-ligne :", e.code || e.message); }
 
     refreshStatus();
     await ensureActiveCourse();
@@ -1265,14 +1372,13 @@ async function loadCourseMeta() {
   const s = await getCourseRef(courseId).get();
   if (!s.exists) {
     await getCourseRef(courseId).set({
-      title: "Manche 1", category: "BG", raceDistanceKm: 3.5,
+      title: "Manche 1", categories: ["MG", "MF", "MMX"], raceDistanceKm: 3.5,
       startAtMs: 0, startsFinished: false, finished: false,
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     }, { merge: true });
   }
 }
 
-// On ne se ré-abonne que si la manche active change réellement (et pas à chaque modification de titre).
 function listenActiveCourse() {
   if (unsubActive) unsubActive();
   unsubActive = getActiveCourseRef().onSnapshot(async s => {
@@ -1292,14 +1398,17 @@ function listenTeams() {
     renderTeamsTable();
     renderStarter();
     updateArrivalBadge();
+    renderArrivalButtons();
+    renderCheckpointsTable();
   });
 }
 
 function listenCourse() {
   if (unsubResults) unsubResults();
   if (unsubMeta) unsubMeta();
+  if (unsubCheckpoints) unsubCheckpoints();
   listeningCourseId = courseId;
-  results = []; courseData = {};
+  results = []; courseData = {}; checkpoints = {};
   lastSlot = -1; currentSlot = -1; lastBeepTick = -1;
   renderResults(); renderLive();
 
@@ -1312,7 +1421,12 @@ function listenCourse() {
     setIfIdle("raceTitle", courseData.title || "");
     setText("screenRaceTitle", courseData.title || "Manche en cours");
     if (courseData.raceDistanceKm) setIfIdle("raceDistanceInput", courseData.raceDistanceKm);
-    if (courseData.category) setIfIdle("raceCategorySelect", courseData.category);
+
+    // Mise à jour des cases à cocher catégories
+    const curCats = getSelectedCategories();
+    document.querySelectorAll("#catCheckboxesContainer input[type='checkbox']").forEach(cb => {
+      cb.checked = curCats.includes(cb.value);
+    });
 
     const arrival = !!courseData.startsFinished;
     $("starterSection").classList.toggle("hidden", arrival);
@@ -1324,6 +1438,8 @@ function listenCourse() {
     updateArrivalBadge();
     renderResults();
     renderLive();
+    renderArrivalButtons();
+    renderCheckpointsTable();
   });
 
   unsubResults = ref.collection("results").onSnapshot({ includeMetadataChanges: true }, s => {
@@ -1334,6 +1450,14 @@ function listenCourse() {
     renderResults();
     renderLive();
     updateArrivalBadge();
+    renderArrivalButtons();
+  });
+
+  // Écoute des points de passage
+  unsubCheckpoints = ref.collection("checkpoints").onSnapshot(s => {
+    checkpoints = {};
+    s.docs.forEach(doc => { checkpoints[doc.id] = doc.data(); });
+    renderCheckpointsTable();
   });
 }
 
@@ -1343,7 +1467,6 @@ function updateArrivalBadge() {
 
 /* ============================================================
    CHRONO & SAS DE DÉPART
-   Le binôme d'index i (par ordre de dossard) part à T0 + i × 15 s.
    ============================================================ */
 function updateTimerState() {
   const st = Number(courseData.startAtMs) || 0;
@@ -1389,7 +1512,6 @@ function handleCountdownLoop(elapsed) {
   const remaining = (TEAM_INTERVAL_MS - (elapsed % TEAM_INTERVAL_MS)) / 1000;
   const cd = $("countdown");
 
-  // Un nouveau créneau commence = le binôme suivant vient de partir
   if (slot !== lastSlot) {
     if (lastSlot !== -1) playSound("top-beep");
     lastSlot = slot;
@@ -1416,7 +1538,7 @@ function handleCountdownLoop(elapsed) {
 
 function renderStarter() {
   const rt = raceTeams();
-  const cat = String(courseData.category || "OPEN").toUpperCase();
+  const cats = getSelectedCategories().join(", ");
   if (!teams.length) {
     setText("startInfo", "");
     setText("activeBibDisplay", "AUCUNE ÉQUIPE CHARGÉE");
@@ -1426,8 +1548,8 @@ function renderStarter() {
     return;
   }
   setText("startInfo", raceTeamsFiltered()
-    ? rt.length + " binôme(s) au départ" + (cat === "OPEN" ? "" : " · catégorie " + cat)
-    : "⚠️ Aucun binôme de catégorie " + cat + " : tous les binômes sont affichés");
+    ? rt.length + " binôme(s) au départ · catégories [" + cats + "]"
+    : "⚠️ Aucun binôme pour [" + cats + "] : tous affichés");
 
   const started = (Number(courseData.startAtMs) || 0) > 0;
   const nextIdx = started ? currentSlot + 1 : 0;
@@ -1449,8 +1571,36 @@ function renderStarter() {
 }
 
 /* ============================================================
-   ARRIVÉES
+   ARRIVÉES (SCAN + SÉLECTION RAPIDE)
    ============================================================ */
+function renderArrivalButtons() {
+  const container = $("arrivalButtonsGrid");
+  if (!container) return;
+  const rt = raceTeams();
+  const hideArrived = $("hideArrivedToggle")?.checked;
+  const arrivedBibs = new Set(results.map(r => String(parseInt(r.dossard, 10))));
+
+  container.innerHTML = rt.map(t => {
+    const bib = String(parseInt(t.dossard, 10));
+    const isArrived = arrivedBibs.has(bib);
+    const hideClass = (isArrived && hideArrived) ? "hide-arrived" : "";
+    const arrivedClass = isArrived ? "arrived" : "";
+    return `
+      <div class="arrival-chip-btn ${arrivedClass} ${hideClass}" data-bib="${bib}">
+        <div class="arrival-chip-bib">#${esc(bib)}</div>
+        <div class="arrival-chip-names">${esc(t.nom1)} / ${esc(t.nom2)}</div>
+        <div style="font-size:0.65rem;color:var(--blue)">${esc(t.categorie || "")}</div>
+      </div>
+    `;
+  }).join("") || "<div class='muted' style='grid-column:1/-1;text-align:center'>Aucun binôme dans cette course</div>";
+
+  container.querySelectorAll(".arrival-chip-btn:not(.arrived)").forEach(btn => {
+    btn.addEventListener("click", () => {
+      recordArrival(btn.dataset.bib);
+    });
+  });
+}
+
 async function recordArrival(raw) {
   const rawStr = String(raw ?? "").trim();
   if (!rawStr) return;
@@ -1473,14 +1623,13 @@ async function recordArrival(raw) {
   const teamIndex = rt.findIndex(t => String(parseInt(t.dossard, 10)) === bib);
   if (teamIndex < 0) {
     playSound("short-beep");
-    return showScanMessage("⚠️ <b>Dossard #" + esc(bib) + "</b> inconnu dans cette manche. Vérifiez le numéro.");
+    return showScanMessage("⚠️ <b>Dossard #" + esc(bib) + "</b> non inscrit dans cette manche.");
   }
   const team = rt[teamIndex];
 
-  // Doublon : contrôle sur les résultats locaux (fonctionne aussi hors-ligne)
   if (results.some(r => String(parseInt(r.dossard, 10)) === bib)) {
     playSound("short-beep");
-    return showScanMessage("⚠️ <b>Dossard #" + esc(bib) + "</b> est déjà enregistré !");
+    return showScanMessage("⚠️ <b>Dossard #" + esc(bib) + "</b> déjà arrivé !");
   }
 
   const departureOffsetMs = teamIndex * TEAM_INTERVAL_MS;
@@ -1488,18 +1637,17 @@ async function recordArrival(raw) {
   const netTimeMs = Math.max(0, grossTimeMs - departureOffsetMs);
   const speedKmh = speedOf({ netTimeMs }, curDist());
 
-  // Pas de await : hors-ligne, l'écriture est mise en file d'attente et envoyée au retour du réseau
   getCourseRef(courseId).collection("results").doc("dossard_" + bib).set({
     dossard: bib,
     nom1: team.nom1 || "", prenom1: team.prenom1 || "",
     nom2: team.nom2 || "", prenom2: team.prenom2 || "",
     college: team.college || "District Cognac",
-    categorie: team.categorie || courseData.category || "DUO",
+    categorie: team.categorie || "DUO",
     grossTimeMs, netTimeMs, departureOffsetMs, speedKmh,
     scannedAtMs: now, createdAt: firebase.firestore.FieldValue.serverTimestamp()
   }).catch(e => {
     console.error(e);
-    showScanMessage("❌ Dossard #" + esc(bib) + " NON enregistré : " + esc(e.message));
+    showScanMessage("❌ Dossard #" + esc(bib) + " non enregistré : " + esc(e.message));
   });
 
   playSound("scan-ok");
@@ -1534,7 +1682,59 @@ function showLastArrival(bib, team, netTimeMs, speedKmh) {
 }
 
 /* ============================================================
-   AFFICHAGES
+   POINTS DE PASSAGE (5 POSTES : ALLER / RETOUR)
+   ============================================================ */
+function renderCheckpointsTable() {
+  const body = $("checkpointsBody");
+  if (!body) return;
+  const rt = raceTeams();
+
+  if (!rt.length) {
+    body.innerHTML = "<tr><td colspan='13' style='text-align:center;padding:24px;color:var(--muted)'>Aucune équipe pour cette manche</td></tr>";
+    return;
+  }
+
+  body.innerHTML = rt.map(t => {
+    const bib = String(parseInt(t.dossard, 10));
+    const cpData = checkpoints["dossard_" + bib] || {};
+
+    let cols = "";
+    for (let p = 1; p <= 5; p++) {
+      const aChecked = cpData[`p${p}_aller`] ? "checked" : "";
+      const rChecked = cpData[`p${p}_retour`] ? "checked" : "";
+      cols += `
+        <td><input type="checkbox" class="cp-checkbox" data-bib="${bib}" data-field="p${p}_aller" ${aChecked}></td>
+        <td><input type="checkbox" class="cp-checkbox" data-bib="${bib}" data-field="p${p}_retour" ${rChecked}></td>
+      `;
+    }
+
+    return `
+      <tr>
+        <td><b>#${esc(bib)}</b></td>
+        <td style="text-align:left">${esc(t.nom1)} / ${esc(t.nom2)}</td>
+        <td><span class="cat-badge">${esc(t.categorie || "")}</span></td>
+        ${cols}
+      </tr>
+    `;
+  }).join("");
+
+  body.querySelectorAll(".cp-checkbox").forEach(cb => {
+    cb.addEventListener("change", () => {
+      const bib = cb.dataset.bib;
+      const field = cb.dataset.field;
+      const val = cb.checked;
+      if (db && courseId) {
+        safe(getCourseRef(courseId).collection("checkpoints").doc("dossard_" + bib).set({
+          [field]: val,
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true }));
+      }
+    });
+  });
+}
+
+/* ============================================================
+   AFFICHAGES CLASSEMENTS & ÉCRAN
    ============================================================ */
 function renderResults() {
   const body = $("resultsBody");
@@ -1545,7 +1745,7 @@ function renderResults() {
   setText("resultCount", results.length + " binôme(s) classé(s)");
 
   const rows = results
-    .map((r, idx) => ({ r, rank: idx + 1 }))   // le rang reste le vrai rang même quand on filtre
+    .map((r, idx) => ({ r, rank: idx + 1 }))
     .filter(({ r }) => (r.dossard + " " + r.nom1 + " " + r.prenom1 + " " + r.nom2 + " " + r.prenom2 + " " + r.college + " " + r.categorie).toLowerCase().includes(q));
 
   body.innerHTML = rows.map(({ r, rank }) => `
@@ -1612,7 +1812,7 @@ function renderTeamsTable() {
 }
 
 /* ============================================================
-   HISTORIQUE
+   HISTORIQUE & DIAGNOSTIC
    ============================================================ */
 async function loadHistory() {
   const box = $("historyList");
@@ -1628,11 +1828,12 @@ async function loadHistory() {
       const date = c.createdAt?.toDate ? c.createdAt.toDate().toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" }) : "";
       const state = c.finished ? "Clôturée" : (Number(c.startAtMs) > 0 ? "En cours" : "Non démarrée");
       const isCur = d.id === courseId;
+      const cats = Array.isArray(c.categories) ? c.categories.join(", ") : (c.category || "");
       return `
         <div class="hist-item ${isCur ? "current" : ""}">
           <div>
             <div class="hist-title">${esc(c.title || "Manche")}${isCur ? " · ACTIVE" : ""}</div>
-            <div class="muted">${esc(date)} · ${esc(c.category || "")} · ${esc(c.raceDistanceKm || "")} km · ${esc(state)}</div>
+            <div class="muted">${esc(date)} · [${esc(cats)}] · ${esc(c.raceDistanceKm || "")} km · ${esc(state)}</div>
           </div>
           <div class="row">
             <button class="btn ghost" data-act="csv" data-id="${esc(d.id)}">⬇ CSV</button>
@@ -1645,17 +1846,14 @@ async function loadHistory() {
   }
 }
 
-/* ============================================================
-   DIAGNOSTIC
-   ============================================================ */
 async function runDiag() {
   setText("diagError", "");
-  setText("d1", typeof firebase !== "undefined" ? "✅ Librairie Firebase chargée" : "❌ Librairie Firebase absente (hors connexion ?)");
+  setText("d1", typeof firebase !== "undefined" ? "✅ Librairie Firebase chargée" : "❌ Librairie Firebase absente");
   setText("d2", db ? "✅ App initialisée (" + currentEtab + ")" : "❌ App non initialisée");
   setText("d5", "serviceWorker" in navigator
-    ? (navigator.serviceWorker.controller ? "✅ Mode hors-ligne actif (service worker)" : "ℹ️ Service worker en cours d'installation — rechargez la page")
+    ? (navigator.serviceWorker.controller ? "✅ Mode hors-ligne actif (service worker)" : "ℹ️ Service worker en cours d'installation")
     : "❌ Service worker non supporté");
-  setText("d4", "Décalage d'horloge avec le serveur : " + (serverOffset >= 0 ? "+" : "") + serverOffset + " ms (corrigé automatiquement)");
+  setText("d4", "Décalage d'horloge serveur : " + (serverOffset >= 0 ? "+" : "") + serverOffset + " ms");
   if (!db) { setText("d3", "❌ Firestore non disponible"); return; }
   try {
     const t0 = performance.now();
@@ -1667,9 +1865,6 @@ async function runDiag() {
   }
 }
 
-/* ============================================================
-   SERVICE WORKER
-   ============================================================ */
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
     navigator.serviceWorker.register("sw.js").catch(e => console.warn("Service worker :", e));
