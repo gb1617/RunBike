@@ -1,0 +1,1462 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#f97316">
+
+<link rel="manifest" href="manifest.json">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Bike&Run EPS">
+
+<title>Bike & Run EPS — District UNSS Cognac</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Oswald:wght@500;600;700&family=JetBrains+Mono:wght@700;800&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/html5-qrcode"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+
+<style>
+:root {
+  --bg: #0f172a;
+  --surface: #1e293b;
+  --surface-alt: #334155;
+  --border: #475569;
+  --text: #f8fafc;
+  --muted: #94a3b8;
+  --orange: #f97316;
+  --orange-dark: #c2410c;
+  --green: #10b981;
+  --blue: #38bdf8;
+  --yellow: #fbbf24;
+  --red: #ef4444;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+}
+
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  min-height: 100%;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background-color: var(--bg);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+}
+
+button, input, select { font: inherit; }
+button { touch-action: manipulation; cursor: pointer; transition: all 0.15s ease; }
+.hidden { display: none !important; }
+
+/* HEADER */
+header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: #090d16;
+  border-bottom: 3px solid var(--orange);
+  padding: 8px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+}
+.brand-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.brand-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--orange), #ea580c);
+  padding: 6px;
+  border-radius: 8px;
+}
+.brand-titles {
+  display: flex;
+  flex-direction: column;
+}
+.brand {
+  font-family: 'Oswald', sans-serif;
+  font-weight: 700;
+  font-size: 1.25rem;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: #fff;
+  line-height: 1.1;
+}
+.sub-brand {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--blue);
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  margin-top: 2px;
+}
+.status {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #334155;
+  color: #cbd5e1;
+  border: 1px solid var(--border);
+}
+.status.ok { background: rgba(16, 185, 129, 0.2); color: #34d399; border-color: #059669; }
+.status.err { background: rgba(239, 68, 68, 0.2); color: #f87171; border-color: #dc2626; }
+
+/* NAVIGATION */
+nav {
+  display: flex;
+  gap: 4px;
+  background: #1e293b;
+  border-bottom: 1px solid var(--border);
+  padding: 6px 8px;
+  position: sticky;
+  top: 59px;
+  z-index: 49;
+}
+nav button {
+  flex: 1;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-family: 'Oswald', sans-serif;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 8px 4px;
+  border-radius: var(--radius-sm);
+  font-size: 0.88rem;
+}
+nav button:hover { color: #fff; background: rgba(255, 255, 255, 0.08); }
+nav button.active {
+  background: var(--surface-alt);
+  color: #fff;
+  border-bottom: 2px solid var(--orange);
+}
+
+/* CARTES & FORMULAIRES */
+main { max-width: 980px; margin: auto; padding: 12px; }
+.tab { display: none; }
+.tab.active { display: block; animation: fadeIn 0.2s ease-out; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+
+.card {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 14px;
+  margin-bottom: 12px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+}
+h2 {
+  font-family: 'Oswald', sans-serif;
+  font-size: 1.15rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 0 0 10px;
+  color: var(--orange);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.muted { color: var(--muted); font-size: 0.82rem; line-height: 1.35; }
+.row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.grow { flex: 1; }
+
+input, select {
+  background: #0f172a;
+  color: #fff;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  min-width: 0;
+}
+input:focus, select:focus {
+  outline: none;
+  border-color: var(--orange);
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.2);
+}
+
+.btn {
+  border: 0;
+  border-radius: var(--radius-sm);
+  padding: 8px 14px;
+  font-family: 'Oswald', sans-serif;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #fff;
+  background: var(--surface-alt);
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.btn:hover { background: #475569; transform: translateY(-1px); }
+.btn.orange { background: var(--orange); }
+.btn.orange:hover { background: var(--orange-dark); }
+.btn.green { background: var(--green); }
+.btn.green:hover { background: #059669; }
+.btn.red { background: var(--red); }
+.btn.red:hover { background: #b91c1c; }
+.btn.ghost { background: transparent; border: 1.5px solid var(--border); color: #fff; }
+.btn.ghost:hover { background: rgba(255, 255, 255, 0.08); border-color: var(--orange); }
+
+/* CHRONOMÈTRE */
+.chrono {
+  background: #090d16;
+  border: 3px solid #334155;
+  border-radius: var(--radius-md);
+  text-align: center;
+  padding: 12px 10px;
+  margin: 10px 0;
+  box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.8);
+}
+.digits {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: clamp(2.6rem, 10vw, 4.2rem);
+  line-height: 1;
+  font-weight: 800;
+  color: var(--yellow);
+  text-shadow: 0 0 16px rgba(251, 191, 36, 0.35);
+  font-variant-numeric: tabular-nums;
+}
+.state {
+  margin-top: 6px;
+  color: #94a3b8;
+  font-family: 'Oswald', sans-serif;
+  font-weight: 600;
+  font-size: 0.82rem;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+/* STARTER */
+.starter-box {
+  background: linear-gradient(145deg, #1e293b, #0f172a);
+  border: 2px solid var(--orange);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  margin-bottom: 12px;
+  text-align: center;
+}
+.countdown-digits {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: clamp(3.2rem, 12vw, 5.5rem);
+  font-weight: 800;
+  line-height: 1;
+  color: #38bdf8;
+  margin: 6px 0;
+  text-shadow: 0 0 20px rgba(56, 189, 248, 0.4);
+}
+.countdown-digits.warning { color: var(--yellow); }
+.countdown-digits.urgent { color: var(--red); animation: pulse 0.5s infinite; }
+@keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+
+.active-team-card {
+  background: #1e293b;
+  border: 2px solid #38bdf8;
+  border-radius: var(--radius-md);
+  padding: 14px;
+  margin: 10px auto;
+  max-width: 580px;
+}
+.active-team-num {
+  font-family: 'Oswald', sans-serif;
+  font-size: 2.2rem;
+  font-weight: 700;
+  color: #fbbf24;
+}
+.active-team-names {
+  font-family: 'Oswald', sans-serif;
+  font-size: 1.3rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  margin: 6px 0;
+}
+.active-team-meta {
+  color: var(--muted);
+  font-size: 0.88rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.next-team-box {
+  background: rgba(51, 65, 85, 0.6);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  margin: 10px auto 0 auto;
+  max-width: 580px;
+  font-size: 0.88rem;
+  color: var(--muted);
+}
+
+/* ARRIVÉE */
+#reader {
+  width: 100% !important;
+  background: #000;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  margin-top: 6px;
+  border: 2px solid var(--orange);
+}
+#reader video {
+  width: 100% !important;
+  height: auto !important;
+  max-height: 280px;
+  object-fit: cover !important;
+}
+
+.last {
+  display: none;
+  margin: 10px 0;
+  border: 2px solid var(--green);
+  background: rgba(16, 185, 129, 0.15);
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  color: #34d399;
+}
+.last.show { display: block; animation: pop 0.2s ease-out; }
+.last.duplicate { border-color: var(--red); background: rgba(239, 68, 68, 0.15); color: #f87171; }
+@keyframes pop { from { transform: scale(0.98); } to { transform: scale(1); } }
+
+.manual-wrapper {
+  background: #1e293b;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px;
+  margin-top: 10px;
+}
+.manual-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--muted);
+  cursor: pointer;
+}
+.manual {
+  font-family: 'Oswald', sans-serif;
+  font-size: 1.3rem;
+  text-align: center;
+  font-weight: 700;
+  flex: 1;
+  padding: 4px 8px;
+  background: #0f172a;
+  color: #fff;
+}
+.pad {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  margin-top: 6px;
+}
+.pad button {
+  padding: 9px 4px;
+  border: 1px solid var(--border);
+  background: #0f172a;
+  color: #fff;
+  border-radius: 4px;
+  font-family: 'Oswald', sans-serif;
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+.pad button:active { background: var(--surface-alt); }
+
+/* TABLEAUX */
+.tablewrap {
+  overflow: auto;
+  max-height: 480px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: #1e293b;
+}
+table { width: 100%; border-collapse: collapse; font-size: 0.84rem; }
+th, td { padding: 8px 10px; border-bottom: 1px solid var(--border); text-align: left; white-space: nowrap; }
+th {
+  position: sticky; top: 0;
+  background: #0f172a;
+  color: var(--orange);
+  font-family: 'Oswald', sans-serif;
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.rank-badge {
+  display: inline-flex; width: 28px; height: 28px;
+  align-items: center; justify-content: center;
+  border-radius: 4px; background: #334155; font-weight: 800;
+  font-family: 'Oswald', sans-serif; font-size: 0.95rem; color: #fff;
+}
+.r1 { background: #fbbf24; color: #000; }
+.r2 { background: #cbd5e1; color: #000; }
+.r3 { background: #f97316; color: #fff; }
+
+.cat-badge {
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  font-family: 'Oswald', sans-serif;
+  background: rgba(56, 189, 248, 0.2);
+  color: #38bdf8;
+  border: 1px solid #0284c7;
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 14px;
+}
+.modal-box {
+  background: #1e293b;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-md);
+  max-width: 500px;
+  width: 100%;
+  padding: 18px;
+}
+
+/* TABLETTE CLASSEMENT */
+.screenPage { display: none; }
+.screenPage.active { display: block; }
+.screen {
+  min-height: 100vh;
+  padding: 14px 12px;
+  background: #090d16;
+  color: #fff;
+  text-align: center;
+}
+.screen-header-tag {
+  font-family: 'Oswald', sans-serif;
+  font-size: 1.1rem;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--blue);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.screen h1 {
+  font-family: 'Oswald', sans-serif;
+  font-size: clamp(2.2rem, 5vw, 3.8rem);
+  font-weight: 700;
+  text-transform: uppercase;
+  margin: 4px 0;
+}
+.screen .sub {
+  color: var(--orange);
+  font-family: 'Oswald', sans-serif;
+  font-size: 1.1rem;
+  letter-spacing: 1.5px;
+  margin-bottom: 12px;
+  text-transform: uppercase;
+}
+
+.screen-search-bar {
+  max-width: 620px;
+  margin: 0 auto 12px auto;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.screen-search-input {
+  flex: 1;
+  background: #1e293b;
+  border: 1.5px solid var(--border);
+  color: #fff;
+  border-radius: 999px;
+  padding: 8px 16px;
+  font-size: 0.95rem;
+}
+.screen-search-input:focus { border-color: var(--orange); }
+
+.live {
+  max-width: 1080px;
+  margin: auto;
+  text-align: left;
+  max-height: calc(100vh - 210px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 8px;
+}
+.live::-webkit-scrollbar { width: 10px; }
+.live::-webkit-scrollbar-track { background: #1e293b; border-radius: 8px; }
+.live::-webkit-scrollbar-thumb { background: var(--orange); border-radius: 8px; }
+
+.liveitem {
+  display: grid;
+  grid-template-columns: 85px 1fr auto;
+  gap: 14px;
+  align-items: center;
+  background: #1e293b;
+  border-left: 8px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin: 6px 0;
+}
+.liveitem.lead { border-left-color: #fbbf24; background: linear-gradient(90deg, rgba(251, 191, 36, 0.15) 0%, #1e293b 45%); }
+
+.liveRank {
+  font-family: 'Oswald', sans-serif;
+  font-size: 2.1rem;
+  font-weight: 700;
+  text-align: center;
+  color: #e2e8f0;
+}
+.duo-names {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.runner-name {
+  font-family: 'Oswald', sans-serif;
+  font-size: 1.15rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: #fff;
+}
+.liveMeta {
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-top: 4px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.liveMeta .badge {
+  background: #334155;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  color: #fff;
+}
+.liveTime {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: clamp(1.2rem, 3.8vw, 2.1rem);
+  font-weight: 800;
+  color: var(--yellow);
+  text-align: right;
+}
+.gap-time {
+  font-size: 0.82rem;
+  color: var(--muted);
+  text-align: right;
+  font-weight: 700;
+}
+.empty { padding: 80px 20px; color: #64748b; text-align: center; font-size: 1.25rem; font-family: 'Oswald', sans-serif; text-transform: uppercase; }
+
+/* IMPRESSION */
+#printSection { display: none; }
+@media print {
+  @page { size: A4 portrait; margin: 6mm; }
+  body { background: #fff !important; color: #000 !important; }
+  header, nav, main, #screenPage { display: none !important; }
+  #printSection { display: block !important; }
+  .bib-page {
+    page-break-after: always;
+    height: 284mm;
+    display: grid;
+    box-sizing: border-box;
+    gap: 3mm;
+  }
+  .bib-page.layout-20 { grid-template-columns: repeat(2, 1fr); grid-template-rows: repeat(10, 1fr); gap: 2mm; }
+  .bib-card {
+    border: 1px dashed #475569;
+    border-radius: 6px;
+    padding: 2mm 3mm;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #fff;
+    color: #000;
+  }
+  .bib-number { font-family: 'Oswald', sans-serif; font-weight: 700; font-size: 24pt; }
+  .bib-bottom { font-size: 8pt; font-weight: 700; text-transform: uppercase; }
+  .bib-qr { width: 22mm; height: 22mm; }
+}
+</style>
+</head>
+<body>
+
+<header id="appHeader">
+  <div class="brand-wrap">
+    <div class="brand-badge">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="5.5" cy="17.5" r="3.5"/>
+        <circle cx="18.5" cy="17.5" r="3.5"/>
+        <path d="M15 6a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm-3 11.5L9 9l3-3 2 3h4"/>
+      </svg>
+    </div>
+    <div class="brand-titles">
+      <div class="brand">BIKE & RUN EPS</div>
+      <div class="sub-brand">DISTRICT UNSS COGNAC</div>
+    </div>
+  </div>
+  <div id="firebaseStatus" class="status">Connexion…</div>
+</header>
+
+<nav id="mainNav">
+  <button class="active" data-tab="starterTab">⏱️ Départs & Arrivées</button>
+  <button data-tab="resultsTab">🏆 Classement</button>
+  <button data-tab="historyTab">📜 Historique</button>
+  <button data-tab="configTab">👥 Équipes & Dossards</button>
+  <button data-tab="diagTab">🔧 Test</button>
+</nav>
+
+<main id="normalApp">
+
+<section id="starterTab" class="tab active">
+  <div class="card">
+    <div class="row">
+      <input id="raceTitle" class="grow" placeholder="Nom de la manche (ex: Minimes Garçons MG)" style="font-family:'Oswald',sans-serif;font-size:1.15rem;font-weight:700">
+      <button class="btn orange" id="saveTitleBtn">💾 Valider Nom</button>
+      <button class="btn ghost" id="openNewRaceModalBtn">＋ Nouvelle Manche</button>
+    </div>
+
+    <div class="row" style="margin-top:10px;background:#1e293b;padding:8px 12px;border-radius:6px;border:1.5px solid var(--border);gap:12px">
+      <div style="display:flex;align-items:center;gap:6px">
+        <label style="font-weight:700;font-size:0.85rem">🏷️ Catégorie :</label>
+        <select id="raceCategorySelect" style="font-weight:700">
+          <option value="BG">BG (Benjamin Garçon)</option>
+          <option value="BF">BF (Benjamin Fille)</option>
+          <option value="BMX">BMX (Benjamin Mixte)</option>
+          <option value="MG">MG (Minime Garçon)</option>
+          <option value="MF">MF (Minime Fille)</option>
+          <option value="MMX">MMX (Minime Mixte)</option>
+          <option value="OPEN">OPEN / ÉTABLISSEMENT</option>
+        </select>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px">
+        <label style="font-weight:700;font-size:0.85rem">📏 Distance :</label>
+        <input id="raceDistanceInput" type="number" step="0.1" min="0.1" value="3.5" style="width:75px;font-weight:800;text-align:center">
+        <span style="font-weight:700;font-size:0.85rem">km</span>
+      </div>
+    </div>
+    
+    <div class="chrono">
+      <div id="chrono" class="digits">00:00.0</div>
+      <div id="raceState" class="state">EN ATTENTE DU DÉPART DU DOSSARD #1</div>
+    </div>
+  </div>
+
+  <div id="starterSection" class="starter-box">
+    <div style="font-family:'Oswald',sans-serif;font-size:1rem;color:var(--orange);letter-spacing:1px;font-weight:700;text-transform:uppercase">
+      🚦 SAS DE DÉPART — CONTRE-LA-MONTRE (15s d'intervalle)
+    </div>
+
+    <div id="countdown" class="countdown-digits">15.0</div>
+
+    <div class="active-team-card">
+      <div class="muted" style="text-transform:uppercase;font-size:0.75rem;font-weight:700">SUR LA LIGNE DE DÉPART</div>
+      <div id="activeBibDisplay" class="active-team-num">DOSSARD #1</div>
+      <div id="activeNamesDisplay" class="active-team-names">Équipe 1</div>
+      <div id="activeSchoolDisplay" class="active-team-meta">Collège Claudie Haigneré · BG</div>
+    </div>
+
+    <div id="nextTeamBox" class="next-team-box">
+      <b>À SUIVRE :</b> <span id="nextTeamLabel">Dossard #2 en préparation…</span>
+    </div>
+
+    <div class="row" style="justify-content:center;margin-top:14px;gap:10px">
+      <button id="startFirstTeamBtn" class="btn green" style="font-size:1.1rem;padding:10px 20px">▶ TOP 1er DÉPART (T0)</button>
+      <button id="finishStartsBtn" class="btn orange">🏁 FIN DES DÉPARTS ➔ BASCULER ARRIVÉE</button>
+    </div>
+  </div>
+
+  <div id="arrivalSection" class="card hidden" style="border-color:var(--green)">
+    <div class="row" style="justify-content:space-between">
+      <h2>📷 Poste d'arrivée — Scan des binômes</h2>
+      <div id="arrivalProgressBadge" class="cat-badge" style="font-size:0.9rem">0 / 0 arrivés</div>
+    </div>
+    
+    <div class="row">
+      <select id="cameraSelect" class="grow"></select>
+      <button id="cameraBtn" class="btn orange">📷 Activer Caméra</button>
+      <button id="backToStartsBtn" class="btn ghost">◀ Retour Sas Départ</button>
+    </div>
+    <div id="reader"></div>
+    <div class="muted" style="margin:6px 0">Visez le QR code ou saisissez le numéro au clavier :</div>
+
+    <div id="lastScan" class="last"></div>
+
+    <div class="manual-wrapper">
+      <div class="manual-header" id="togglePadBtn">
+        <span>⌨️ Saisie manuelle dossard</span>
+        <span id="togglePadIcon">▾ Masquer/Afficher</span>
+      </div>
+      <div id="padContainer" style="margin-top:6px">
+        <div class="row">
+          <input id="manualBib" class="manual" type="text" inputmode="none" readonly placeholder="N° Dossard">
+          <button id="manualBtn" class="btn orange" style="padding:6px 14px">OK</button>
+          <button id="backBtn" class="btn red" style="padding:6px 12px">⌫</button>
+        </div>
+        <div class="pad">
+          <button data-key="1">1</button><button data-key="2">2</button><button data-key="3">3</button>
+          <button data-key="4">4</button><button data-key="5">5</button><button data-key="6">6</button>
+          <button data-key="7">7</button><button data-key="8">8</button><button data-key="9">9</button>
+          <button data-key="C">C</button><button data-key="0">0</button><button data-key="OK">✓</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="row" style="justify-content:center;margin-top:14px">
+      <button id="closeRaceBtn" class="btn red">■ Clôturer définitivement la manche</button>
+    </div>
+  </div>
+</section>
+
+<div id="newRaceModal" class="modal-overlay hidden">
+  <div class="modal-box">
+    <h2 style="margin-top:0">🏁 Nouvelle Manche Bike & Run</h2>
+    <p class="muted">Définissez l'intitulé de la course avant d'accueillir les élèves sur la ligne :</p>
+    <div style="margin:14px 0">
+      <input id="modalRaceTitleInput" class="grow" style="width:100%;font-size:1.15rem;font-weight:700" placeholder="Ex: Manche 1 — Benjamins Mixte BMX">
+    </div>
+    <div class="row" style="justify-content:flex-end;gap:8px">
+      <button id="cancelModalBtn" class="btn ghost">Annuler</button>
+      <button id="confirmNewRaceBtn" class="btn green">✓ Créer & Activer</button>
+    </div>
+  </div>
+</div>
+
+<section id="resultsTab" class="tab">
+  <div class="card">
+    <div class="row">
+      <div class="grow">
+        <h2>🏆 Classement Officiel (Temps Compensé)</h2>
+        <div id="resultCount" class="muted">0 binôme classé</div>
+      </div>
+      <button id="exportPdfBtn" class="btn green">📄 Exporter PDF</button>
+      <button id="exportBtn" class="btn orange">⬇ Exporter CSV</button>
+    </div>
+    <div class="row" style="margin-lg:10px 0">
+      <input id="filterText" class="grow" placeholder="Rechercher élève, collège, dossard…">
+    </div>
+    <div class="tablewrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Pl.</th>
+            <th>Doss.</th>
+            <th>Équipiers (Binôme)</th>
+            <th>Cat.</th>
+            <th>Collège / Établissement</th>
+            <th>Heure Arrivée</th>
+            <th>Temps Net</th>
+            <th>Écart</th>
+            <th>Vitesse</th>
+          </tr>
+        </thead>
+        <tbody id="resultsBody"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section id="historyTab" class="tab">
+  <div class="card">
+    <div class="row">
+      <div class="grow">
+        <h2>📜 Historique des manches District Cognac</h2>
+        <div class="muted">Retrouvez les manches précédentes, rechargez-les ou exportez les résultats.</div>
+      </div>
+      <button id="refreshHistoryBtn" class="btn ghost">↻ Actualiser</button>
+    </div>
+    <div id="historyList" style="margin-top:12px">
+      <div class="muted" style="text-align:center;padding:20px">Chargement de l'historique…</div>
+    </div>
+  </div>
+</section>
+
+<section id="configTab" class="tab">
+  <div class="card">
+    <h2>🏫 Établissement & District</h2>
+    <div class="row">
+      <input id="etabInput" class="grow" placeholder="Identifiant (ex: district-cognac)">
+      <button id="changeEtabBtn" class="btn orange">Basculer</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>🔗 Accès Rapides Tablettes</h2>
+    <div class="row">
+      <button id="openScreenBtn" class="btn green grow">📺 Ouvrir Tablette Écran Classement</button>
+      <button id="copyScreenBtn" class="btn ghost grow">📋 Copier le lien écran</button>
+    </div>
+  </div>
+
+  <div class="card" style="border-left: 5px solid var(--orange)">
+    <h2>📊 1. Synchronisation Google Sheets Binômes</h2>
+    <div class="muted" style="margin-bottom:10px">
+      Lien Google Sheet (Colonnes : <b>Dossard;Nom1;Prenom1;Nom2;Prenom2;Sexe;Categorie;College</b>) :
+    </div>
+    <div class="row" style="gap:8px">
+      <input id="sheetUrlInput" class="grow" placeholder="https://docs.google.com/spreadsheets/d/.../edit?usp=sharing">
+      <button id="syncSheetBtn" class="btn green">🔄 Mettre à jour la base</button>
+    </div>
+    <div id="sheetSyncInfo" class="muted" style="margin-top:8px;font-weight:600"></div>
+  </div>
+
+  <div class="card">
+    <div class="row">
+      <div class="grow">
+        <h2>👥 Binômes importés dans la base</h2>
+        <div id="teamsCount" class="muted">0 équipe enregistrée</div>
+      </div>
+      <button id="clearTeamsBtn" class="btn red" style="padding:4px 10px;font-size:0.78rem">Vider les équipes</button>
+    </div>
+    <div class="tablewrap" style="max-height:280px;margin-top:8px">
+      <table>
+        <thead>
+          <tr>
+            <th>Dossard</th>
+            <th>Élève 1</th>
+            <th>Élève 2</th>
+            <th>Catégorie</th>
+            <th>Collège</th>
+          </tr>
+        </thead>
+        <tbody id="teamsTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>🖨️ 2. Impression des Dossards Binômes</h2>
+    <div class="row">
+      <button id="printBibsBtn" class="btn orange">🖨️ Imprimer les planches de dossards</button>
+    </div>
+  </div>
+</section>
+
+<section id="diagTab" class="tab">
+  <div class="card">
+    <h2>🔧 Diagnostic de connexion</h2>
+    <div style="display:grid;gap:6px">
+      <div id="d1" class="muted">⏳ Firebase…</div>
+      <div id="d2" class="muted">⏳ Initialisation…</div>
+      <div id="d3" class="muted">⏳ Firestore…</div>
+    </div>
+    <p id="diagError" style="color:var(--red)"></p>
+    <button id="diagBtn" class="btn ghost">↻ Relancer le test</button>
+  </div>
+</section>
+
+</main>
+
+<section id="screenPage" class="screenPage">
+  <div class="screen">
+    <div class="screen-header-tag">
+      <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="5.5" cy="17.5" r="3.5"/>
+        <circle cx="18.5" cy="17.5" r="3.5"/>
+        <path d="M15 6a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm-3 11.5L9 9l3-3 2 3h4"/>
+      </svg>
+      <span>BIKE & RUN · DISTRICT UNSS COGNAC</span>
+    </div>
+    <h1 id="screenRaceTitle">Manche 1</h1>
+    <div class="sub">
+      ● CLASSEMENT EN DIRECT (TEMPS COMPENSÉ) · TOTAL : <span id="screenCount">0</span>
+    </div>
+
+    <div class="screen-search-bar">
+      <input id="screenSearchInput" class="screen-search-input" type="text" placeholder="🔍 Rechercher un élève, un dossard ou un collège…">
+      <button id="clearScreenSearchBtn" class="btn ghost" style="padding:6px 12px;border-radius:999px;font-size:0.8rem">✕</button>
+    </div>
+
+    <div id="liveList" class="live"></div>
+  </div>
+</section>
+
+<div id="printSection"></div>
+
+<script>
+// CONFIGURATION FIREBASE
+const firebaseConfig = {
+  apiKey: "AIzaSyDlBNfrhpysWzUegvOunZmBPzOhs8y3IVY",
+  authDomain: "runandbike-97d24.firebaseapp.com",
+  projectId: "runandbike-97d24",
+  storageBucket: "runandbike-97d24.firebasestorage.app",
+  messagingSenderId: "496982171898",
+  appId: "1:496982171898:web:2df522534143085007e943"
+};
+
+const urlParams = new URLSearchParams(location.search);
+let currentEtab = (urlParams.get("etab") || "district-cognac").toLowerCase().replace(/[^a-z0-9_-]/g, "");
+if (!currentEtab) currentEtab = "district-cognac";
+
+let db = null, courseId = null, courseData = {}, results = [], teams = [], scanner = null, scanning = false;
+let timer = null, localStart = 0, wakeLock = null;
+let lastScanTime = 0, lastScanBib = "";
+let currentStartBibIndex = 0;
+
+const $ = id => document.getElementById(id);
+const fmt = ms => {
+  ms = Math.max(0, Number(ms) || 0);
+  const m = String(Math.floor(ms / 60000)).padStart(2, "0");
+  const s = String(Math.floor((ms % 60000) / 1000)).padStart(2, "0");
+  const d = Math.floor((ms % 1000) / 100);
+  return m + ":" + s + "." + d;
+};
+
+function setStatus(t, c) {
+  const elem = $("firebaseStatus");
+  if (elem) {
+    elem.textContent = t;
+    elem.className = "status" + (c ? " " + c : "");
+  }
+}
+
+function esc(s) {
+  return String(s ?? "").replace(/[&<>"']/g, m => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" })[m]);
+}
+
+let audioCtx = null;
+function playSound(type) {
+  try {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    const now = audioCtx.currentTime;
+    if (type === "short-beep") {
+      osc.frequency.setValueAtTime(600, now);
+      gain.gain.setValueAtTime(0.2, now);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+      osc.start(now); osc.stop(now + 0.1);
+    } else if (type === "top-beep") {
+      osc.frequency.setValueAtTime(1200, now);
+      gain.gain.setValueAtTime(0.35, now);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
+      osc.start(now); osc.stop(now + 0.35);
+    } else if (type === "scan-ok") {
+      osc.frequency.setValueAtTime(880, now);
+      gain.gain.setValueAtTime(0.25, now);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+      osc.start(now); osc.stop(now + 0.15);
+    }
+  } catch(e) {}
+}
+
+async function requestWakeLock() {
+  if ('wakeLock' in navigator) {
+    try { wakeLock = await navigator.wakeLock.request('screen'); } catch (err) {}
+  }
+}
+
+function getEtabDoc() { return db.collection("bikerun_etablissements").doc(currentEtab); }
+function getActiveCourseRef() { return getEtabDoc().collection("config").doc("active"); }
+function getCourseRef(id) { return getEtabDoc().collection("courses").doc(id || courseId); }
+
+// --- ATTACHEMENT IMMÉDIAT DES BOUTONS (AVANT TOUT) ---
+document.addEventListener("DOMContentLoaded", () => {
+  // Navigation par onglets
+  document.querySelectorAll("nav button").forEach(b => {
+    b.addEventListener("click", () => {
+      document.querySelectorAll("nav button").forEach(x => x.classList.remove("active"));
+      document.querySelectorAll(".tab").forEach(x => x.classList.remove("active"));
+      b.classList.add("active");
+      const target = $(b.dataset.tab);
+      if (target) target.classList.add("active");
+    });
+  });
+
+  // Clavier manuel
+  if($("manualBtn")) $("manualBtn").addEventListener("click", () => recordArrival($("manualBib").value));
+  if($("backBtn")) $("backBtn").addEventListener("click", () => { $("manualBib").value = $("manualBib").value.slice(0, -1); });
+  document.querySelectorAll(".pad button").forEach(b => {
+    b.addEventListener("click", () => {
+      const k = b.dataset.key;
+      if(k === "C") $("manualBib").value = "";
+      else if(k === "OK") recordArrival($("manualBib").value);
+      else $("manualBib").value += k;
+    });
+  });
+
+  if($("togglePadBtn")) {
+    $("togglePadBtn").addEventListener("click", () => {
+      const p = $("padContainer");
+      if (p) p.classList.toggle("hidden");
+    });
+  }
+
+  // Départs
+  if($("startFirstTeamBtn")) {
+    $("startFirstTeamBtn").addEventListener("click", async () => {
+      const now = Date.now();
+      if(db && courseId) {
+        await getCourseRef(courseId).set({ startAtMs: now, startsFinished: false, finished: false }, { merge: true });
+      }
+      localStart = now;
+      playSound("top-beep");
+      startMainTicker();
+    });
+  }
+
+  if($("finishStartsBtn")) {
+    $("finishStartsBtn").addEventListener("click", async () => {
+      if (!confirm("Confirmer la fin des départs et activer le poste d'arrivée ?")) return;
+      if(db && courseId) await getCourseRef(courseId).set({ startsFinished: true }, { merge: true });
+      $("starterSection").classList.add("hidden");
+      $("arrivalSection").classList.remove("hidden");
+    });
+  }
+
+  if($("backToStartsBtn")) {
+    $("backToStartsBtn").addEventListener("click", async () => {
+      if(db && courseId) await getCourseRef(courseId).set({ startsFinished: false }, { merge: true });
+      $("starterSection").classList.remove("hidden");
+      $("arrivalSection").classList.add("hidden");
+    });
+  }
+
+  if($("closeRaceBtn")) {
+    $("closeRaceBtn").addEventListener("click", async () => {
+      if (!confirm("Clôturer définitivement la manche et archiver les résultats ?")) return;
+      clearInterval(timer);
+      if(db && courseId) {
+        await getCourseRef(courseId).set({ finished: true, closedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
+      }
+      alert("Manche clôturée avec succès.");
+    });
+  }
+
+  if($("saveTitleBtn")) {
+    $("saveTitleBtn").addEventListener("click", async () => {
+      const t = $("raceTitle").value.trim() || "Manche";
+      if(db && courseId) {
+        await getCourseRef(courseId).set({ title: t }, { merge: true });
+        await getActiveCourseRef().set({ title: t }, { merge: true });
+      }
+      $("saveTitleBtn").textContent = "✅ Enregistré !";
+      setTimeout(() => { $("saveTitleBtn").textContent = "💾 Valider Nom"; }, 1800);
+    });
+  }
+
+  if($("openNewRaceModalBtn")) {
+    $("openNewRaceModalBtn").addEventListener("click", () => {
+      $("modalRaceTitleInput").value = "Manche " + (new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+      $("newRaceModal").classList.remove("hidden");
+    });
+  }
+  if($("cancelModalBtn")) $("cancelModalBtn").addEventListener("click", () => $("newRaceModal").classList.add("hidden"));
+  if($("confirmNewRaceBtn")) {
+    $("confirmNewRaceBtn").addEventListener("click", async () => {
+      const title = $("modalRaceTitleInput").value.trim() || "Manche";
+      const id = "manche_" + Date.now();
+      const d = parseFloat($("raceDistanceInput").value) || 3.5;
+      const cat = $("raceCategorySelect").value;
+      if(db) {
+        await getCourseRef(id).set({
+          title: title, startAtMs: 0, startsFinished: false, finished: false,
+          raceDistanceKm: d, category: cat, createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        await getActiveCourseRef().set({ courseId: id, title: title, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+      }
+      courseId = id;
+      $("newRaceModal").classList.add("hidden");
+      listenCourse();
+    });
+  }
+
+  // Caméra
+  if($("cameraBtn")) {
+    $("cameraBtn").addEventListener("click", async () => {
+      if(scanning) {
+        try { await scanner.stop(); } catch(e) {}
+        scanning = false;
+        $("cameraBtn").textContent = "📷 Activer Caméra";
+        return;
+      }
+      try {
+        scanner = scanner || new Html5Qrcode("reader");
+        const camId = $("cameraSelect").value;
+        await scanner.start(camId, { fps: 25, qrbox: 220 }, txt => recordArrival(txt), () => {});
+        scanning = true;
+        $("cameraBtn").textContent = "⏹ Arrêter Caméra";
+      } catch(e) {
+        alert("Caméra inaccessible : " + e.message);
+      }
+    });
+  }
+
+  // Écran tablette plein écran
+  if($("openScreenBtn")) {
+    $("openScreenBtn").addEventListener("click", () => {
+      window.open(location.origin + location.pathname + "?etab=" + currentEtab + "&mode=screen", "_blank");
+    });
+  }
+  if($("copyScreenBtn")) {
+    $("copyScreenBtn").addEventListener("click", () => {
+      navigator.clipboard.writeText(location.origin + location.pathname + "?etab=" + currentEtab + "&mode=screen");
+      $("copyScreenBtn").textContent = "✅ Copié !";
+      setTimeout(() => { $("copyScreenBtn").textContent = "📋 Copier le lien écran"; }, 2000);
+    });
+  }
+
+  // Exports
+  if($("exportBtn")) {
+    $("exportBtn").addEventListener("click", () => {
+      if(!results.length) { alert("Aucun résultat à exporter."); return; }
+      const bestTime = results[0]?.netTimeMs || 0;
+      const rows = [
+        ["Pl.", "Dossard", "Élève 1 (Cycliste)", "Élève 2 (Coureur)", "Catégorie", "Collège", "Temps Brut", "Temps Net", "Écart", "Vitesse (km/h)"],
+        ...results.map((r, i) => [
+          i + 1,
+          r.dossard,
+          (r.nom1 + " " + r.prenom1).trim(),
+          (r.nom2 + " " + r.prenom2).trim(),
+          r.categorie,
+          r.college,
+          fmt(r.grossTimeMs),
+          fmt(r.netTimeMs),
+          (i === 0) ? "Leader" : ("+" + fmt(r.netTimeMs - bestTime)),
+          r.speedKmh
+        ])
+      ];
+      const csv = "\uFEFF" + rows.map(r => r.map(x => '"' + String(x).replaceAll('"', '""') + '"').join(";")).join("\n");
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+      a.download = "classement_bikerun_" + (courseData.title || "manche").replace(/[^a-z0-9_-]/gi, '_') + ".csv";
+      a.click();
+      URL.revokeObjectURL(a.href);
+    });
+  }
+
+  if($("exportPdfBtn")) {
+    $("exportPdfBtn").addEventListener("click", () => {
+      if (!window.jspdf || !results.length) { alert("Aucun résultat ou module PDF non disponible."); return; }
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+      const bestTime = results[0]?.netTimeMs || 0;
+      doc.setFont("helvetica", "bold"); doc.setFontSize(16); doc.setTextColor(249, 115, 22);
+      doc.text("BIKE & RUN EPS — DISTRICT UNSS COGNAC", 14, 16);
+      doc.setFontSize(12); doc.setTextColor(30, 41, 59);
+      doc.text("Classement : " + (courseData.title || "Manche 1"), 14, 23);
+      doc.setFont("helvetica", "normal"); doc.setFontSize(8.5); doc.setTextColor(100, 116, 139);
+      doc.text("Distance : " + (courseData.raceDistanceKm || 3.5) + " km · Édité le " + (new Date().toLocaleString("fr-FR")), 14, 28);
+      const tableData = results.map((r, i) => [
+        i + 1, r.dossard, ((r.nom1 + " " + r.prenom1) + "\n" + (r.nom2 + " " + r.prenom2)).toUpperCase(),
+        r.categorie, r.college, fmt(r.netTimeMs), (i === 0) ? "Leader" : ("+" + fmt(r.netTimeMs - bestTime)), r.speedKmh + " km/h"
+      ]);
+      doc.autoTable({
+        startY: 32,
+        head: [["Pl.", "Doss.", "Binôme", "Cat.", "Collège", "Temps Net", "Écart", "Vitesse"]],
+        body: tableData,
+        theme: "striped",
+        headStyles: { fillColor: [249, 115, 22], textColor: [255, 255, 255], fontStyle: "bold", fontSize: 8.5 },
+        styles: { font: "helvetica", fontSize: 8, cellPadding: 2 }
+      });
+      doc.save("classement_bikerun_" + (courseData.title || "manche").replace(/[^a-z0-9_-]/gi, '_') + ".pdf");
+    });
+  }
+
+  // Impression des dossards
+  if($("printBibsBtn")) {
+    $("printBibsBtn").addEventListener("click", () => {
+      if(!teams.length) { alert("Veuillez d'abord synchroniser vos équipes."); return; }
+      const printSec = $("printSection");
+      printSec.innerHTML = "";
+      for(let i = 0; i < teams.length; i += 20) {
+        const page = document.createElement("div");
+        page.className = "bib-page layout-20";
+        const slice = teams.slice(i, i + 20);
+        slice.forEach(t => {
+          const card = document.createElement("div");
+          card.className = "bib-card";
+          const qrId = "qr_" + t.dossard + "_" + Math.random().toString(36).substr(2, 5);
+          const payload = t.dossard + ";" + t.nom1 + ";" + t.prenom1 + ";" + t.nom2 + ";" + t.prenom2 + ";" + t.categorie + ";" + t.college;
+          card.innerHTML = `
+            <div class="bib-number">#${esc(t.dossard)}</div>
+            <div class="bib-bottom">🚴 ${esc(t.nom1)}<br>🏃 ${esc(t.nom2)}<br><span style="color:#64748b">${esc(t.college||'UNSS')}</span></div>
+            <div id="${qrId}" class="bib-qr"></div>
+          `;
+          page.appendChild(card);
+          setTimeout(() => {
+            new QRCode(card.querySelector("#" + qrId), { text: unescape(encodeURIComponent(payload)), width: 80, height: 80 });
+          }, 0);
+        });
+        printSec.appendChild(page);
+      }
+      setTimeout(() => window.print(), 500);
+    });
+  }
+
+  // Synchro Google Sheet
+  if($("syncSheetBtn")) {
+    $("syncSheetBtn").addEventListener("click", async () => {
+      const url = $("sheetUrlInput").value.trim();
+      const info = $("sheetSyncInfo");
+      info.textContent = "";
+      const match = url.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+      if (!match) { alert("Lien Google Sheet invalide."); return; }
+      const sheetId = match[1];
+      localStorage.setItem("bikerun_sheet_" + currentEtab, url);
+      const exportUrl = "https://docs.google.com/spreadsheets/d/" + sheetId + "/gviz/tq?tqx=out:csv";
+      try {
+        info.textContent = "Téléchargement en cours…";
+        const res = await fetch(exportUrl);
+        const csv = await res.text();
+        const lines = csv.replace(/^\uFEFF/, "").split(/\r?\n/).filter(l => l.trim().length > 0);
+        const rows = [];
+        for(let i = 1; i < lines.length; i++) {
+          const p = lines[i].split(";").map(s => s.trim().replace(/^["']|["']$/g, ''));
+          if(p.length >= 5 && p[0]) {
+            rows.push({
+              dossard: p[0].replace(/[^\d]/g, ""),
+              nom1: p[1] || "", prenom1: p[2] || "",
+              nom2: p[3] || "", prenom2: p[4] || "",
+              sexe: (p[5] || "").toUpperCase(),
+              categorie: (p[6] || "DUO").toUpperCase(),
+              college: p[7] || "District Cognac"
+            });
+          }
+        }
+        if(!db) throw new Error("Base de données non connectée.");
+        const col = getEtabDoc().collection("teams");
+        const batch = db.batch();
+        rows.forEach(r => batch.set(col.doc("dossard_" + r.dossard), r, { merge: true }));
+        await batch.commit();
+        info.textContent = "✅ " + rows.length + " binômes synchronisés avec succès !";
+        info.style.color = "var(--green)";
+      } catch(e) {
+        info.textContent = "❌ " + e.message;
+        info.style.color = "var(--red)";
+      }
+    });
+  }
+
+  // Recherche classement
+  if($("filterText")) $("filterText").addEventListener("input", renderResults);
+  if($("screenSearchInput")) $("screenSearchInput").addEventListener("input", renderLive);
+  if($("clearScreenSearchBtn")) {
+    $("clearScreenSearchBtn").addEventListener("click", () => {
+      $("screenSearchInput").value = "";
+      renderLive();
+    });
+  }
+
+  // Changement établissement
+  if($("changeEtabBtn")) {
+    $("changeEtabBtn").addEventListener("click", () => {
+      const v = $("etabInput").value.trim().toLowerCase().replace(/[^a-z0-9_-]/g, "");
+      if(v && v !== currentEtab) {
+        location.search = "?etab=" + encodeURIComponent(v);
+      }
+    });
+  }
+
+  // Mode écran déporté
+  if(urlParams.get("mode") === "screen") {
+    $("appHeader").classList.add("hidden");
+    $("mainNav").classList.add("hidden");
+    $("normalApp").classList.add("hidden");
+    $("screenPage").classList.add("active");
+    document.body.style.background = "#090d16";
+    requestWakeLock();
+  }
+
+  // Lancement
+  cameras();
+  init();
+});
+
+// LOGIQUE MÉTIER
+async function init() {
+  try {
+    if(!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    db = firebase.firestore();
+    setStatus("● Connecté : " + currentEtab.toUpperCase(), "ok");
+    if($("d1")) $("d1").textContent = "✅ Firebase connecté";
+    if($("d2")) $("d2").textContent = "✅ App initialisée";
+    if($("d3")) $("d3").textContent = "✅ Firestore opérationnel";
+    await ensureActiveCourse();
+    listenActiveCourse();
+  } catch(e) {
+    console.error(e);
+    setStatus("● Mode Hors-Ligne", "err");
+    if($("diagError")) $("diagError").textContent = e.message;
+  }
+}
+
+async function recordArrival(raw) {
+  const rawStr = String(raw ?? "").trim();
+  if(!rawStr) return;
+  let bib = rawStr.includes(";") ? String(rawStr.split(";")[0] || "").replace(/[^\d]/g, "") : rawStr.replace(/[^\d]/g, "");
+  if(!bib) return;
+
+  const now = Date.now();
+  if(bib === lastScanBib && (now - lastScanTime) < 2000) return;
+  lastScanBib = bib;
+  lastScanTime = now;
+
+  const team = teams.find(t => String(t.dossard) === bib);
+  const teamIndex = teams.findIndex(t => String(t.dossard) === bib);
+
+  const startT0 = Number(courseData.startAtMs) || 0;
+  const departureOffsetMs = (teamIndex >= 0 ? teamIndex : 0) * 15000;
+  const grossTimeMs = startT0 > 0 ? Math.max(0, now - startT0) : 0;
+  const netTimeMs = Math.max(0, grossTimeMs - departureOffsetMs);
+
+  const distanceKm = Number(courseData.raceDistanceKm) || 3.5;
+  const speedKmh = netTimeMs > 0 ? (Math.round((distanceKm / (netTimeMs / 3600000)) * 10) / 10) : 0;
+  const resRef = getCourseRef(courseId).collection("results").doc("dossard_" + bib);
+
+  try {
+    let dup = false;
+    await db.runTransaction(async tx => {
+      const snap = await tx.get(resRef);
+      if(snap.exists) { dup = true; return; }
+      tx.set(resRef, {
+        dossard: bib,
+        nom1: team?.nom1 || "", prenom1: team?.prenom1 || "",
+        nom2: team?.nom2 || "", prenom2: team?.prenom2 || "",
+        college: team?.college || "District Cognac",
+        categorie: team?.categorie || courseData.category || "DUO",
+        grossTimeMs: grossTimeMs, netTimeMs: netTimeMs,
+        departureOffsetMs: departureOffsetMs, speedKmh: speedKmh,
+        scannedAtMs: now, createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    });
+
+    playSound(dup ? "short-beep" : "scan-ok");
+    showLastArrivalInstant(bib, team, netTimeMs, speedKmh, dup);
+  } catch(e) {
+    console.error(e);
+  }
+  if($("manualBib")) $("manualBib").value = "";
+}
+
+function showLastArrivalInstant(bib, team, netTimeMs, speedKmh, dup) {
+  if(!$("lastScan")) return;
+  $("lastScan").className = "last show" + (dup ? " duplicate" : "");
+  if(dup) {
+    $("lastScan").innerHTML = "⚠️ <b>Dossard #" + esc(bib) + "</b> est déjà enregistré !";
+    return;
+  }
+  const n1 = team ? (team.nom1 + " " + team.prenom1) : ("Dossard #" + bib);
+  const n2 = team ? (team.nom2 + " " + team.prenom2) : "";
+  const col = team?.college ? (" · " + team.college) : "";
+
+  $("lastScan").innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+      <div>
+        <div style="font-size:1.15rem">🏁 <b>Dossard #${esc(bib)}</b>${esc(col)}</div>
+        <div style="font-size:0.95rem;margin-top:2px">🚴 ${esc(n1)} | 🏃 ${esc(n2)}</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:1.3rem;font-weight:800;color:var(--yellow)">${fmt(netTimeMs)}</div>
+        <div style="font-size:0.85rem;font-weight:700;color:var(--blue)">⚡ ${speedKmh} km/h</div>
+      </div>
+    </div>
+  `;
+}
+
+function renderResults() {
+  if(!$("resultsBody")) return;
+  const q = $("filterText").value.toLowerCase().trim();
+  const filtered = results.filter(r => (r.dossard + " " + r.nom1 + " " + r.nom2 + " " + r.college + " " + r.categorie).toLowerCase().includes(q));
+  if($("resultCount")) $("resultCount").textContent = results.length + " binôme(s) classé(s)";
+
+  const bestTime = results.length ? results[0].netTimeMs : 0;
+  $("resultsBody").innerHTML = filtered.map((r, i) => {
+    const gap = (i === 0) ? "Leader" : ("+" + fmt(r.netTimeMs - bestTime));
+    return `
+      <tr>
+        <td><span class="rank-badge ${i===0?'r1':(i===1?'r2':(i===2?'r3':''))}">${i+1}</span></td>
+        <td><b>#${esc(r.dossard)}</b></td>
+        <td><div>🚴 ${esc(r.nom1)} ${esc(r.prenom1)}<br>🏃 ${esc(r.nom2)} ${esc(r.prenom2)}</div></td>
+        <td><span class="cat-badge">${esc(r.categorie)}</span></td>
+        <td>${esc(r.college)}</td>
+        <td>${fmt(r.grossTimeMs)}</td>
+        <td><b style="color:var(--yellow);font-family:'JetBrains Mono'">${fmt(r.netTimeMs)}</b></td>
+        <td><b>${gap}</b></td>
+        <td><b>${r.speedKmh} km/h</b></td>
+      </tr>
+    `;
+  }).join("") || "<tr><td colspan=9 style='text-align:center;padding:30px;color:var(--muted)'>Aucune arrivée</td></tr>";
+}
+
+function renderLive() {
+  if(!$("liveList")) return;
+  if($("screenCount")) $("screenCount").textContent = results.length;
+  if(!results.length) {
+    $("liveList").innerHTML = "<div class='empty'>🏁<br><br>EN ATTENTE DES PREMIERS BINÔMES…</div>";
+    return;
+  }
+  const query = ($("screenSearchInput") ? $("screenSearchInput").value : "").toLowerCase().trim();
+  let list = results.filter(r => (r.dossard + " " + r.nom1 + " " + r.nom2 + " " + r.college + " " + r.categorie).toLowerCase().includes(query));
+  const leaderTime = results[0]?.netTimeMs || 0;
+
+  $("liveList").innerHTML = list.map((r, i) => {
+    const rank = results.findIndex(x => x.dossard === r.dossard) + 1;
+    const gap = (rank === 1) ? "Leader" : ("+" + fmt(r.netTimeMs - leaderTime));
+    return `
+      <div class="liveitem ${rank===1?'lead':''}">
+        <div class="liveRank">#${rank}</div>
+        <div>
+          <div class="duo-names">
+            <div class="runner-name">🚴 ${esc(r.nom1)} ${esc(r.prenom1)}</div>
+            <div class="runner-name">🏃 ${esc(r.nom2)} ${esc(r.prenom2)}</div>
+          </div>
+          <div class="liveMeta">
+            <span class="badge">Dossard <b>#${esc(r.dossard)}</b></span>
+            <span class="badge" style="background:#0284c7;color:#fff">${esc(r.categorie)}</span>
+            <span class="badge">${esc(r.college)}</span>
+          </div>
+        </div>
+        <div>
+          <div class="liveTime">${fmt(r.netTimeMs)}</div>
+          <div class="gap-time">${gap}</div>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+function renderTeamsTable() {
+  const b = $("teamsTableBody");
+  if(!b) return;
+  if($("teamsCount")) $("teamsCount").textContent = teams.length + " binôme(s) enregistré(s)";
+  b.innerHTML = teams.map(t => `
+    <tr>
+      <td><b>#${esc(t.dossard)}</b></td>
+      <td>${esc(t.nom1)} ${esc(t.prenom1)}</td>
+      <td>${esc(t.nom2)} ${esc(t.prenom2)}</td>
+      <td><b>${esc(t.categorie||'')}</b></td>
+      <td>${esc(t.college||'')}</td>
+    </tr>
+  `).join("") || "<tr><td colspan=5 style='text-align:center;padding:20px;color:var(--muted)'>Aucun binôme</td></tr>";
+}
+</script>
+</body>
+</html>
