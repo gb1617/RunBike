@@ -54,7 +54,6 @@ button, input, select { font: inherit; }
 button { touch-action: manipulation; cursor: pointer; transition: all 0.15s ease; }
 .hidden { display: none !important; }
 
-/* HEADER */
 header {
   position: sticky;
   top: 0;
@@ -114,7 +113,6 @@ header {
 .status.ok { background: rgba(16, 185, 129, 0.2); color: #34d399; border-color: #059669; }
 .status.err { background: rgba(239, 68, 68, 0.2); color: #f87171; border-color: #dc2626; }
 
-/* NAVIGATION */
 nav {
   display: flex;
   gap: 4px;
@@ -145,7 +143,6 @@ nav button.active {
   border-bottom: 2px solid var(--orange);
 }
 
-/* CARTES & FORMULAIRES */
 main { max-width: 980px; margin: auto; padding: 12px; }
 .tab { display: none; }
 .tab.active { display: block; animation: fadeIn 0.2s ease-out; }
@@ -216,7 +213,6 @@ input:focus, select:focus {
 .btn.ghost { background: transparent; border: 1.5px solid var(--border); color: #fff; }
 .btn.ghost:hover { background: rgba(255, 255, 255, 0.08); border-color: var(--orange); }
 
-/* CHRONOMÈTRE */
 .chrono {
   background: #090d16;
   border: 3px solid #334155;
@@ -245,7 +241,6 @@ input:focus, select:focus {
   text-transform: uppercase;
 }
 
-/* STARTER */
 .starter-box {
   background: linear-gradient(145deg, #1e293b, #0f172a);
   border: 2px solid var(--orange);
@@ -307,7 +302,6 @@ input:focus, select:focus {
   color: var(--muted);
 }
 
-/* ARRIVÉE */
 #reader {
   width: 100% !important;
   background: #000;
@@ -380,7 +374,6 @@ input:focus, select:focus {
 }
 .pad button:active { background: var(--surface-alt); }
 
-/* TABLEAUX */
 .tablewrap {
   overflow: auto;
   max-height: 480px;
@@ -439,7 +432,6 @@ th {
   padding: 18px;
 }
 
-/* TABLETTE CLASSEMENT */
 .screenPage { display: none; }
 .screenPage.active { display: block; }
 .screen {
@@ -572,7 +564,6 @@ th {
 }
 .empty { padding: 80px 20px; color: #64748b; text-align: center; font-size: 1.25rem; font-family: 'Oswald', sans-serif; text-transform: uppercase; }
 
-/* IMPRESSION */
 #printSection { display: none; }
 @media print {
   @page { size: A4 portrait; margin: 6mm; }
@@ -756,7 +747,7 @@ th {
       <button id="exportPdfBtn" class="btn green">📄 Exporter PDF</button>
       <button id="exportBtn" class="btn orange">⬇ Exporter CSV</button>
     </div>
-    <div class="row" style="margin-lg:10px 0">
+    <div class="row" style="margin:10px 0">
       <input id="filterText" class="grow" placeholder="Rechercher élève, collège, dossard…">
     </div>
     <div class="tablewrap">
@@ -898,7 +889,6 @@ th {
 <div id="printSection"></div>
 
 <script>
-// CONFIGURATION FIREBASE
 const firebaseConfig = {
   apiKey: "AIzaSyDlBNfrhpysWzUegvOunZmBPzOhs8y3IVY",
   authDomain: "runandbike-97d24.firebaseapp.com",
@@ -977,9 +967,25 @@ function getEtabDoc() { return db.collection("bikerun_etablissements").doc(curre
 function getActiveCourseRef() { return getEtabDoc().collection("config").doc("active"); }
 function getCourseRef(id) { return getEtabDoc().collection("courses").doc(id || courseId); }
 
-// --- ATTACHEMENT IMMÉDIAT DES BOUTONS (AVANT TOUT) ---
+// Fonction cameras() réintégrée et sécurisée
+async function cameras() {
+  try {
+    if (typeof Html5Qrcode !== "undefined" && $("cameraSelect")) {
+      const cams = await Html5Qrcode.getCameras();
+      $("cameraSelect").innerHTML = "";
+      cams.forEach((c, i) => {
+        const o = document.createElement("option");
+        o.value = c.id;
+        o.textContent = c.label || ("Caméra " + (i + 1));
+        $("cameraSelect").appendChild(o);
+      });
+    }
+  } catch(e) {
+    console.warn("Caméra non disponible:", e);
+  }
+}
+
 document.addEventListener("DOMContentLoaded", () => {
-  // Navigation par onglets
   document.querySelectorAll("nav button").forEach(b => {
     b.addEventListener("click", () => {
       document.querySelectorAll("nav button").forEach(x => x.classList.remove("active"));
@@ -990,7 +996,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
-  // Clavier manuel
   if($("manualBtn")) $("manualBtn").addEventListener("click", () => recordArrival($("manualBib").value));
   if($("backBtn")) $("backBtn").addEventListener("click", () => { $("manualBib").value = $("manualBib").value.slice(0, -1); });
   document.querySelectorAll(".pad button").forEach(b => {
@@ -1009,7 +1014,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Départs
   if($("startFirstTeamBtn")) {
     $("startFirstTeamBtn").addEventListener("click", async () => {
       const now = Date.now();
@@ -1088,7 +1092,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Caméra
   if($("cameraBtn")) {
     $("cameraBtn").addEventListener("click", async () => {
       if(scanning) {
@@ -1109,7 +1112,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Écran tablette plein écran
   if($("openScreenBtn")) {
     $("openScreenBtn").addEventListener("click", () => {
       window.open(location.origin + location.pathname + "?etab=" + currentEtab + "&mode=screen", "_blank");
@@ -1123,7 +1125,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Exports
   if($("exportBtn")) {
     $("exportBtn").addEventListener("click", () => {
       if(!results.length) { alert("Aucun résultat à exporter."); return; }
@@ -1180,7 +1181,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Impression des dossards
   if($("printBibsBtn")) {
     $("printBibsBtn").addEventListener("click", () => {
       if(!teams.length) { alert("Veuillez d'abord synchroniser vos équipes."); return; }
@@ -1211,7 +1211,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Synchro Google Sheet
   if($("syncSheetBtn")) {
     $("syncSheetBtn").addEventListener("click", async () => {
       const url = $("sheetUrlInput").value.trim();
@@ -1255,7 +1254,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Recherche classement
   if($("filterText")) $("filterText").addEventListener("input", renderResults);
   if($("screenSearchInput")) $("screenSearchInput").addEventListener("input", renderLive);
   if($("clearScreenSearchBtn")) {
@@ -1265,7 +1263,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Changement établissement
   if($("changeEtabBtn")) {
     $("changeEtabBtn").addEventListener("click", () => {
       const v = $("etabInput").value.trim().toLowerCase().replace(/[^a-z0-9_-]/g, "");
@@ -1275,7 +1272,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Mode écran déporté
   if(urlParams.get("mode") === "screen") {
     $("appHeader").classList.add("hidden");
     $("mainNav").classList.add("hidden");
@@ -1285,13 +1281,17 @@ document.addEventListener("DOMContentLoaded", () => {
     requestWakeLock();
   }
 
-  // Lancement
   cameras();
   init();
 });
 
-// LOGIQUE MÉTIER
 async function init() {
+  if($("etabInput")) $("etabInput").value = currentEtab;
+  if ($("sheetUrlInput")) {
+    const saved = localStorage.getItem("bikerun_sheet_" + currentEtab) || "";
+    if (saved) $("sheetUrlInput").value = saved;
+  }
+
   try {
     if(!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     db = firebase.firestore();
@@ -1305,6 +1305,183 @@ async function init() {
     console.error(e);
     setStatus("● Mode Hors-Ligne", "err");
     if($("diagError")) $("diagError").textContent = e.message;
+  }
+}
+
+async function ensureActiveCourse() {
+  const ref = getActiveCourseRef();
+  const snap = await ref.get();
+  if(snap.exists && snap.data().courseId) {
+    courseId = snap.data().courseId;
+  } else {
+    courseId = "manche_" + Date.now();
+    await ref.set({ courseId: courseId, title: "Manche 1", updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+  }
+  await loadCourseMeta();
+}
+
+async function loadCourseMeta() {
+  const s = await getCourseRef(courseId).get();
+  if(!s.exists) {
+    await getCourseRef(courseId).set({
+      title: "Manche 1",
+      category: "BG",
+      raceDistanceKm: 3.5,
+      startAtMs: 0,
+      startsFinished: false,
+      finished: false,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+  }
+}
+
+let unsubResults = null, unsubTeams = null, unsubMeta = null;
+function listenActiveCourse() {
+  getActiveCourseRef().onSnapshot(async s => {
+    const id = s.data()?.courseId;
+    if(!id) return;
+    if(id !== courseId) {
+      courseId = id;
+      await loadCourseMeta();
+    }
+    listenCourse();
+  });
+}
+
+function listenCourse() {
+  if(unsubResults) unsubResults();
+  if(unsubTeams) unsubTeams();
+  if(unsubMeta) unsubMeta();
+
+  const ref = getCourseRef(courseId);
+
+  unsubMeta = ref.onSnapshot(s => {
+    courseData = s.data() || {};
+    if($("raceTitle")) $("raceTitle").value = courseData.title || "";
+    if($("screenRaceTitle")) $("screenRaceTitle").textContent = courseData.title || "Manche en cours";
+    if($("raceDistanceInput") && courseData.raceDistanceKm) $("raceDistanceInput").value = courseData.raceDistanceKm;
+    if($("raceCategorySelect") && courseData.category) $("raceCategorySelect").value = courseData.category;
+    
+    if (courseData.startsFinished) {
+      $("starterSection").classList.add("hidden");
+      $("arrivalSection").classList.remove("hidden");
+    } else {
+      $("starterSection").classList.remove("hidden");
+      $("arrivalSection").classList.add("hidden");
+    }
+
+    updateTimerState();
+    updateStarterDisplay();
+  });
+
+  unsubTeams = getEtabDoc().collection("teams").onSnapshot(s => {
+    teams = s.docs.map(d => ({ id: d.id, ...d.data() }));
+    teams.sort((a,b) => (Number(a.dossard)||0) - (Number(b.dossard)||0));
+    renderTeamsTable();
+    updateStarterDisplay();
+  });
+
+  unsubResults = ref.collection("results").onSnapshot(s => {
+    results = s.docs.map(d => ({ id: d.id, ...d.data() }));
+    results.sort((a,b) => (Number(a.netTimeMs)||0) - (Number(b.netTimeMs)||0));
+    renderResults();
+    renderLive();
+    if($("arrivalProgressBadge")) {
+      $("arrivalProgressBadge").textContent = results.length + " / " + teams.length + " arrivés";
+    }
+  });
+}
+
+function updateTimerState() {
+  const st = Number(courseData.startAtMs) || 0;
+  if(st > 0) {
+    localStart = st;
+    if(!courseData.finished) {
+      startMainTicker();
+      if($("raceState")) $("raceState").textContent = courseData.startsFinished ? "COURSE EN COURS — ARRIVÉES" : "DÉPARTS EN COURS (15s)";
+    } else {
+      clearInterval(timer);
+      if($("raceState")) $("raceState").textContent = "MANCHE CLÔTURÉE";
+    }
+  } else {
+    clearInterval(timer);
+    if($("raceState")) $("raceState").textContent = "EN ATTENTE DU DÉPART DU DOSSARD #1";
+    if($("chrono")) $("chrono").textContent = "00:00.0";
+    if($("countdown")) $("countdown").textContent = "15.0";
+  }
+}
+
+function startMainTicker() {
+  clearInterval(timer);
+  timer = setInterval(() => {
+    const elapsed = Date.now() - localStart;
+    if($("chrono")) $("chrono").textContent = fmt(elapsed);
+    handleCountdownLoop(elapsed);
+  }, 50);
+}
+
+let lastSecondBeep = -1;
+function handleCountdownLoop(elapsedMs) {
+  if (courseData.startsFinished || !teams.length) return;
+  const totalSeconds = elapsedMs / 1000;
+  const teamInterval = 15;
+  const currentSlot = Math.floor(totalSeconds / teamInterval);
+  const remainingInSlot = (teamInterval - (totalSeconds % teamInterval));
+
+  const cdElem = $("countdown");
+  if (cdElem) {
+    cdElem.textContent = remainingInSlot.toFixed(1);
+    if (remainingInSlot <= 3.0) {
+      cdElem.className = "countdown-digits urgent";
+    } else if (remainingInSlot <= 6.0) {
+      cdElem.className = "countdown-digits warning";
+    } else {
+      cdElem.className = "countdown-digits";
+    }
+  }
+
+  const secFloor = Math.floor(remainingInSlot);
+  if (secFloor !== lastSecondBeep) {
+    if (secFloor === 3 || secFloor === 2 || secFloor === 1) playSound("short-beep");
+    else if (secFloor === 0) playSound("top-beep");
+    lastSecondBeep = secFloor;
+  }
+
+  currentStartBibIndex = currentSlot;
+  updateStarterDisplay();
+}
+
+function updateStarterDisplay() {
+  if (!teams.length) {
+    if($("activeBibDisplay")) $("activeBibDisplay").textContent = "AUCUNE ÉQUIPE CHARGÉE";
+    return;
+  }
+  if (currentStartBibIndex >= teams.length) {
+    if($("activeBibDisplay")) $("activeBibDisplay").textContent = "TOUTES LES ÉQUIPES SONT PARTIES !";
+    if($("activeNamesDisplay")) $("activeNamesDisplay").textContent = "Cliquez sur 'Fin des départs' ci-dessous";
+    if($("nextTeamLabel")) $("nextTeamLabel").textContent = "Sas de départ vide.";
+    return;
+  }
+
+  const activeTeam = teams[currentStartBibIndex];
+  const nextTeam = teams[currentStartBibIndex + 1];
+
+  if (activeTeam) {
+    if($("activeBibDisplay")) $("activeBibDisplay").textContent = "DOSSARD #" + activeTeam.dossard;
+    if($("activeNamesDisplay")) {
+      $("activeNamesDisplay").innerHTML = "🚴 " + esc(activeTeam.nom1) + " " + esc(activeTeam.prenom1) + "<br>🏃 " + esc(activeTeam.nom2) + " " + esc(activeTeam.prenom2);
+    }
+    if($("activeSchoolDisplay")) {
+      $("activeSchoolDisplay").textContent = (activeTeam.college || 'District Cognac') + " · " + (activeTeam.categorie || 'DUO');
+    }
+  }
+
+  if (nextTeam) {
+    if($("nextTeamLabel")) {
+      $("nextTeamLabel").textContent = "Dossard #" + nextTeam.dossard + " : " + nextTeam.nom1 + "/" + nextTeam.nom2;
+    }
+  } else {
+    if($("nextTeamLabel")) $("nextTeamLabel").textContent = "Dernier binôme en course !";
   }
 }
 
